@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>com.cbs-sports.scraper</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/bin/bash</string>
+            <string>-c</string>
+            <string>source /Users/sean/Code/3gs-scraper/venv/bin/activate && /Users/sean/Code/3gs-scraper/venv/bin/python /Users/sean/Code/3gs-scraper/app/main.py</string>
+        </array>
+        <key>StartCalendarInterval</key>
+        <dict>
+            <!-- 2am -->
+            <key>Hour</key>
+            <integer>2</integer>
+            <!-- Tuesday -->
+            <key>Weekday</key>
+            <integer>2</integer>
+        </dict>
+        <key>StandardErrorPath</key>
+        <string>/tmp/cbs-sports-scraper/stderr.log</string>
+        <key>StandardOutPath</key>
+        <string>/tmp/cbs-sports-scraper/stdout.log</string>
+    </dict>
+</plist>

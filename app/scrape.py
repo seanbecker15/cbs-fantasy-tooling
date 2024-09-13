@@ -65,7 +65,7 @@ class Row:
         return csv
 
 
-def __scrape_week_standings(driver, max_wait_time) -> any:
+def __scrape_week_standings(driver, max_wait_time) -> list[Row]:
     # Search for a table with aria-label "Weekly Standings" and get all rows
     table = WebDriverWait(driver, max_wait_time).until(
         EC.presence_of_element_located((By.XPATH, "//table[@aria-label='Weekly Standings']")))
@@ -158,7 +158,7 @@ def __print_most_points(results):
         f"Players with the most points: {', '.join(players_with_max_points)}")
 
 
-def run_scraper(curr_week_number: int, target_week_number: int) -> int:
+def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
     email = os.getenv("EMAIL")
     password = os.getenv("PASSWORD")
 
@@ -170,10 +170,13 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> int:
     __navigate_login(driver, max_wait_time, email, password)
     sleep(5)
 
-    __navigate_week_standings(driver, max_wait_time, curr_week_number, target_week_number)
+    __navigate_week_standings(driver, max_wait_time,
+                              curr_week_number, target_week_number)
     sleep(5)
 
     results = __scrape_week_standings(driver, max_wait_time)
     __print_csv(results)
     __print_most_wins(results)
     __print_most_points(results)
+
+    return results
