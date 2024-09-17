@@ -12,9 +12,9 @@
         </array>
         <key>StartCalendarInterval</key>
         <dict>
-            <!-- 2am -->
+            <!-- 9am -->
             <key>Hour</key>
-            <integer>2</integer>
+            <integer>9</integer>
             <!-- Tuesday -->
             <key>Weekday</key>
             <integer>2</integer>
