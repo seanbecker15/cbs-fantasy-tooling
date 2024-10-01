@@ -37,10 +37,13 @@ def __navigate_login(driver, max_wait_time, email: str, password: str) -> int:
 
 def __navigate_week_standings(driver, max_wait_time, curr_week_number, target_week_number) -> any:
     # Search for div with text "Week X" and click on it to open menu
+    print(f"Looking for div with text 'Week {curr_week_number}'")
     week_div = WebDriverWait(driver, max_wait_time).until(
         EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), 'Week {curr_week_number}')]")))
     week_div.click()
+    
     # Search for li with text "Week Y" and click on it to navigate to the target week
+    print(f"Looking for li with text 'Week {target_week_number}'")
     target_week_li = WebDriverWait(driver, max_wait_time).until(
         EC.presence_of_element_located((By.XPATH, f"//li[contains(text(), 'Week {target_week_number}')]")))
     target_week_li.click()
@@ -162,13 +165,13 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
     email = os.getenv("EMAIL")
     password = os.getenv("PASSWORD")
 
-    max_wait_time = 10
+    max_wait_time = 30
     chrome_options = Options()
 
     driver = webdriver.Chrome(options=chrome_options)
 
     __navigate_login(driver, max_wait_time, email, password)
-    sleep(5)
+    sleep(2)
 
     __navigate_week_standings(driver, max_wait_time,
                               curr_week_number, target_week_number)
