@@ -3,8 +3,12 @@ from dotenv import load_dotenv
 from scrape import run_scraper
 from notify import send_success_notification, send_failure_notification
 
+override_target_week = None
+override_curr_week = None
+
 # Tuesday, September 3, 2024
 week_one_start_date = '2024-09-03'
+
 
 def __get_weeks_since_start():
     now = datetime.now()
@@ -14,10 +18,12 @@ def __get_weeks_since_start():
 def main():
     load_dotenv()
 
-    curr_week_no = __get_weeks_since_start() + 1
+    prev_week_no = override_target_week if override_target_week else __get_weeks_since_start()
+    curr_week_no = override_curr_week if override_curr_week else __get_weeks_since_start() + 1
+
     print(f"Current week number: {curr_week_no}")
-    print(f"Running scraper for week {curr_week_no - 1}...")
-    results = run_scraper(curr_week_no, curr_week_no - 1)
+    print(f"Running scraper for week {prev_week_no}...")
+    results = run_scraper(curr_week_no, prev_week_no)
 
     if not results or len(results) == 0:
         send_failure_notification()
