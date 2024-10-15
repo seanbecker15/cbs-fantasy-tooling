@@ -41,7 +41,7 @@ def __navigate_week_standings(driver, max_wait_time, curr_week_number, target_we
     week_div = WebDriverWait(driver, max_wait_time).until(
         EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), 'Week {curr_week_number}')]")))
     week_div.click()
-    
+
     # Search for li with text "Week Y" and click on it to navigate to the target week
     print(f"Looking for li with text 'Week {target_week_number}'")
     target_week_li = WebDriverWait(driver, max_wait_time).until(
@@ -172,9 +172,19 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
 
     __navigate_login(driver, max_wait_time, email, password)
     sleep(2)
-
-    __navigate_week_standings(driver, max_wait_time,
-                              curr_week_number, target_week_number)
+    
+    i = curr_week_number
+    succeeded = False
+    while i >= target_week_number and not succeeded:
+        try:
+            __navigate_week_standings(driver, max_wait_time, i, target_week_number)
+            succeeded = True
+            break
+        except TimeoutException:
+            print(
+                f"Could not find week {i}. Trying week {i-1} instead.")
+            i -= 1
+        
     sleep(5)
 
     results = __scrape_week_standings(driver, max_wait_time)
