@@ -12,10 +12,16 @@
         </array>
         <key>StartCalendarInterval</key>
         <dict>
-            <!-- 9am -->
+            <!--
+            !important!
+            Run at 9:30am on Tuesdays because the week transitions
+            Tuesday at 9am. This tool depends on the text "Week X" on the website,
+            where X is the current week and X-1 is the week that just concluded.
+            -->
             <key>Hour</key>
             <integer>9</integer>
-            <!-- Tuesday -->
+            <key>Minute</key>
+            <integer>30</integer>
             <key>Weekday</key>
             <integer>2</integer>
         </dict>
