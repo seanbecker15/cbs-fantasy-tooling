@@ -23,13 +23,14 @@ def main():
 
     print(f"Current week number: {curr_week_no}")
     print(f"Running scraper for week {prev_week_no}...")
-    results = run_scraper(curr_week_no, prev_week_no)
-
-    if not results or len(results) == 0:
-        send_failure_notification()
-    else:
+    
+    try:
+        results = run_scraper(curr_week_no, prev_week_no)
         send_success_notification(results)
-
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        send_failure_notification()
+        return
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

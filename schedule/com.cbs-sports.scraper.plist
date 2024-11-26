@@ -8,7 +8,7 @@
         <array>
             <string>/bin/bash</string>
             <string>-c</string>
-            <string>source /Users/sean/Code/3gs-scraper/venv/bin/activate && /Users/sean/Code/3gs-scraper/venv/bin/python /Users/sean/Code/3gs-scraper/app/main.py</string>
+            <string>source /Users/sean/Code/cbs-fantasy-tooling/venv/bin/activate && /Users/sean/Code/cbs-fantasy-tooling/venv/bin/python /Users/sean/Code/cbs-fantasy-tooling/app/main.py</string>
         </array>
         <key>StartCalendarInterval</key>
         <dict>

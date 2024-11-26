@@ -171,25 +171,35 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
     driver = webdriver.Chrome(options=chrome_options)
 
     __navigate_login(driver, max_wait_time, email, password)
-    sleep(2)
-    
+    sleep(5)
+
     i = curr_week_number
     succeeded = False
     while i >= target_week_number and not succeeded:
         try:
-            __navigate_week_standings(driver, max_wait_time, i, target_week_number)
+            print(f"Looking for dropdown with text 'Week {i}'")
+            __navigate_week_standings(
+                driver, max_wait_time, i, target_week_number)
+            sleep(2)
             succeeded = True
             break
         except TimeoutException:
             print(
-                f"Could not find week {i}. Trying week {i-1} instead.")
+                f"Could not find dropdown with text 'Week {i}'.")
             i -= 1
-        
+
+    if not succeeded:
+        raise Exception(
+            f"Could not find week dropdown. Searched {curr_week_number}..{target_week_number}.")
+
     sleep(5)
 
     results = __scrape_week_standings(driver, max_wait_time)
     __print_csv(results)
     __print_most_wins(results)
     __print_most_points(results)
+
+    if not results or len(results) == 0:
+        raise Exception("No results found.")
 
     return results
