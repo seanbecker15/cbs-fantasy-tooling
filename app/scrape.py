@@ -175,6 +175,10 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
 
     i = curr_week_number
     succeeded = False
+
+    # Sometimes on first load the page doesn't finish loading
+    driver.refresh()
+    
     while i >= target_week_number and not succeeded:
         try:
             print(f"Looking for dropdown with text 'Week {i}'")
