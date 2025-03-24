@@ -9,13 +9,19 @@ On OSX, use `launchctl` to schedule this program to run every Tuesday morning at
 
 OSX Manual Launch Commands
 
-```bash
+```zsh
 $ cd ~/Library/LaunchAgents
 $ launchctl unload path/to/some.plist     # Unload / stop task
 $ launchctl load path/to/some.plist       # Load / resume task
 $ launchctl list path/to/some.plist       # List task info
 $ sudo launchctl list                     # List "root" tasks
 $ launchctl list                          # List user tasks
+```
+
+Alternatively there are helpers scripts to schedule / unschedule:
+```zsh
+$ ./scripts/schedule-task.sh # set up scheduled proc (runs every tuesday at 9am)
+$ ./scripts/unschedule-task.sh # clears schedule proc
 ```
 
 Logs are stored in `/tmp/cbs-sports-scraper/stdout.log` and `/tmp/cbs-sports-scraper/stderr.log`
