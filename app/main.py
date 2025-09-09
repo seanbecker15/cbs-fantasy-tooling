@@ -6,8 +6,8 @@ from notify import send_success_notification, send_failure_notification
 override_target_week = None
 override_curr_week = None
 
-# Tuesday, September 3, 2024
-week_one_start_date = '2024-09-03'
+# Tuesday, September 2, 2025
+week_one_start_date = '2025-09-02'
 
 
 def __get_weeks_since_start():
