@@ -49,23 +49,7 @@ def __navigate_week_standings(driver, max_wait_time, curr_week_number, target_we
     target_week_li.click()
 
 
-class Row:
-    name = ""
-    results = []
-
-    def __init__(self):
-        self.name = ""
-        self.results = []
-
-    def __str__(self):
-        out = "Row: { name: " + self.name + \
-            ", results: [ " + self.csv() + " ] }"
-        return out
-
-    def csv(self):
-        cols = [self.name] + [str(x) for x in self.results]
-        csv = ",".join(cols)
-        return csv
+from storage import Row
 
 
 def __scrape_week_standings(driver, max_wait_time) -> list[Row]:

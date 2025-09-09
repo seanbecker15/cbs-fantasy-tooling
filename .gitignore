@@ -2,3 +2,6 @@
 .env
 out
 __pycache__
+.vscode
+credentials.json
+token.json
