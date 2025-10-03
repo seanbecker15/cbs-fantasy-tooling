@@ -1,5 +1,4 @@
 import os
-import csv
 import json
 from datetime import datetime
 from typing import List, Dict, Any
@@ -9,6 +8,7 @@ class Row:
     def __init__(self):
         self.name = ""
         self.results = []
+        self.picks = []
 
     def __str__(self):
         out = "Row: { name: " + self.name + \
@@ -71,7 +71,8 @@ class ResultsData:
                     "name": row.name,
                     "points": row.results[0],
                     "wins": row.results[1],
-                    "losses": row.results[2]
+                    "losses": row.results[2],
+                    "picks": row.picks
                 }
                 for row in self.results
             ]

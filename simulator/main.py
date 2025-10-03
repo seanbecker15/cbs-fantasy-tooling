@@ -16,9 +16,13 @@ Notes:
 import os
 import math
 import random
+import json
+import argparse
+import sys
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, time, timezone
 from statistics import median
+from difflib import get_close_matches
 
 import requests
 import numpy as np
@@ -55,6 +59,15 @@ SLATE_MAX_GAMES = 18
 FALLBACK_NUM_GAMES = 16
 FALLBACK_SEED = 42
 
+# Strategy codes for file naming
+STRATEGY_CODES = {
+    "Chalk-MaxPoints": "chalk",
+    "Slight-Contrarian": "slight", 
+    "Aggressive-Contrarian": "aggress",
+    "Random-MidShuffle": "shuffle",
+    "Custom-User": "user"
+}
+
 # Field composition (others in your 32-person league)
 STRATEGY_MIX = {
     "Chalk-MaxPoints": 16,
@@ -66,6 +79,17 @@ assert sum(STRATEGY_MIX.values()) == N_OTHERS, "STRATEGY_MIX must sum to 31."
 # ===============================
 # 1) TIME WINDOW HELPERS (CURRENT NFL WEEK)
 # ===============================
+
+def get_current_nfl_week() -> int:
+    """
+    Calculate the current NFL week based on season start date (September 2, 2025).
+    Week 1 starts on September 2, 2025 (Tuesday).
+    """
+    season_start = datetime(2025, 9, 2, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    days_since_start = (now - season_start).days
+    week = max(1, min(18, (days_since_start // 7) + 1))
+    return week
 
 def get_commence_time_from() -> str:
     """
@@ -315,6 +339,263 @@ STRATEGIES = {
 }
 
 # ===============================
+# 3.5) USER PICK FUNCTIONS
+# ===============================
+
+def normalize_team_name(user_team: str, available_teams: list[str]) -> str:
+    """
+    Normalize user input team name to match available team names.
+    Handles common variations and abbreviations.
+    """
+    user_team = user_team.strip()
+    
+    # Direct match first
+    for team in available_teams:
+        if user_team.lower() == team.lower():
+            return team
+    
+    # Try partial matching (e.g., "Ravens" -> "Baltimore Ravens")
+    for team in available_teams:
+        if user_team.lower() in team.lower() or team.lower() in user_team.lower():
+            return team
+    
+    # Common abbreviations mapping
+    abbrev_map = {
+        'bal': 'baltimore ravens', 'buf': 'buffalo bills', 'mia': 'miami dolphins',
+        'ne': 'new england patriots', 'nyj': 'new york jets', 'pit': 'pittsburgh steelers',
+        'cle': 'cleveland browns', 'cin': 'cincinnati bengals', 'hou': 'houston texans',
+        'ind': 'indianapolis colts', 'jax': 'jacksonville jaguars', 'ten': 'tennessee titans',
+        'den': 'denver broncos', 'kc': 'kansas city chiefs', 'lv': 'las vegas raiders',
+        'lac': 'los angeles chargers', 'dal': 'dallas cowboys', 'nyg': 'new york giants',
+        'phi': 'philadelphia eagles', 'was': 'washington commanders', 'chi': 'chicago bears',
+        'det': 'detroit lions', 'gb': 'green bay packers', 'min': 'minnesota vikings',
+        'atl': 'atlanta falcons', 'car': 'carolina panthers', 'no': 'new orleans saints',
+        'tb': 'tampa bay buccaneers', 'ari': 'arizona cardinals', 'lar': 'los angeles rams',
+        'sea': 'seattle seahawks', 'sf': 'san francisco 49ers'
+    }
+    
+    user_lower = user_team.lower()
+    for abbrev, full_name in abbrev_map.items():
+        if user_lower == abbrev:
+            # Find matching team in available teams
+            for team in available_teams:
+                if full_name in team.lower():
+                    return team
+    
+    # Fuzzy matching as last resort
+    matches = get_close_matches(user_team, available_teams, n=1, cutoff=0.6)
+    if matches:
+        return matches[0]
+    
+    raise ValueError(f"Could not match team '{user_team}' to available teams: {available_teams}")
+
+def validate_user_picks(user_picks: list[str], week_mapping: list[dict]) -> tuple[list[str], list[str]]:
+    """
+    Validate user picks against available teams for the current week.
+    Returns (normalized_picks, error_messages)
+    """
+    errors = []
+    normalized_picks = []
+    
+    # Extract all available teams from week mapping
+    all_teams = set()
+    for game in week_mapping:
+        all_teams.add(game["home_team"])
+        all_teams.add(game["away_team"])
+    all_teams = list(all_teams)
+    
+    if len(user_picks) != len(week_mapping):
+        errors.append(f"Expected {len(week_mapping)} picks, got {len(user_picks)}")
+        return [], errors
+    
+    for i, pick in enumerate(user_picks, 1):
+        try:
+            normalized = normalize_team_name(pick, all_teams)
+            normalized_picks.append(normalized)
+        except ValueError as e:
+            errors.append(f"Pick {i}: {str(e)}")
+    
+    # Check for duplicates
+    if len(set(normalized_picks)) != len(normalized_picks):
+        duplicates = [pick for pick in set(normalized_picks) if normalized_picks.count(pick) > 1]
+        errors.append(f"Duplicate picks found: {duplicates}")
+    
+    return normalized_picks, errors
+
+def parse_user_picks(user_input: str | list, week_mapping: list[dict]) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Parse user picks from various input formats into picks and confidence arrays.
+    
+    Args:
+        user_input: String (comma-separated) or list of team names in confidence order (16->1)
+        week_mapping: Current week's games mapping
+        
+    Returns:
+        (picks_array, confidence_array) where:
+        - picks_array: 1 for favorite, 0 for underdog
+        - confidence_array: confidence levels 1-16
+    """
+    # Handle string input
+    if isinstance(user_input, str):
+        user_picks = [team.strip() for team in user_input.split(',')]
+    else:
+        user_picks = user_input
+    
+    # Validate picks
+    normalized_picks, errors = validate_user_picks(user_picks, week_mapping)
+    if errors:
+        raise ValueError("Validation errors:\n" + "\n".join(errors))
+    
+    # Create picks and confidence arrays
+    num_games = len(week_mapping)
+    picks = np.zeros(num_games, dtype=int)
+    confidence = np.zeros(num_games, dtype=int)
+    
+    # Create a copy to avoid modifying the original
+    remaining_picks = normalized_picks.copy()
+    
+    for i, game in enumerate(week_mapping):
+        # Find which team user picked for this game
+        user_pick = None
+        confidence_level = None
+        pick_index = None
+        
+        for j, pick in enumerate(remaining_picks):
+            if pick == game["home_team"] or pick == game["away_team"]:
+                user_pick = pick
+                # Find the original position in the user's pick order
+                original_index = normalized_picks.index(pick)
+                confidence_level = num_games - original_index  # First pick = 16, last pick = 1
+                pick_index = j
+                break
+        
+        if user_pick is None:
+            raise ValueError(f"No pick found for game: {game['away_team']} at {game['home_team']}")
+        
+        confidence[i] = confidence_level
+        # Remove from remaining picks
+        remaining_picks.pop(pick_index)
+        
+        # Determine if pick is favorite (1) or underdog (0)
+        if user_pick == game["favorite"]:
+            picks[i] = 1
+        else:
+            picks[i] = 0
+    
+    return picks, confidence
+
+def create_user_strategy(user_picks: np.ndarray, user_confidence: np.ndarray):
+    """
+    Create a strategy function from user picks that can be used in simulations.
+    """
+    def user_strategy_fn(_):
+        # Return the user's fixed picks and confidence, ignoring probabilities
+        return user_picks.copy(), user_confidence.copy()
+    
+    return user_strategy_fn
+
+def simulate_user_picks(user_input: str | list, week_mapping: list[dict], game_probs: np.ndarray, 
+                       others_mix: dict, n_sims: int = N_SIMS) -> dict:
+    """
+    Simulate user picks against the field using Monte Carlo analysis.
+    """
+    try:
+        picks, confidence = parse_user_picks(user_input, week_mapping)
+    except ValueError as e:
+        print(f"Error parsing user picks: {e}")
+        return None
+    
+    user_strategy = create_user_strategy(picks, confidence)
+    
+    # Run simulation using same framework as built-in strategies
+    others = []
+    for name, count in others_mix.items():
+        others.extend([STRATEGIES[name]] * count)
+    assert len(others) == N_OTHERS
+    
+    user_totals = []; user_points = []; user_wins = []
+    user_mw_bonus = []; user_mp_bonus = []
+    
+    for _ in range(n_sims):
+        random.shuffle(others)
+        players = [user_strategy] + others
+        wins, points, total, mw_bonus, mp_bonus = simulate_week_once(game_probs, players)
+        user_totals.append(total[0]); user_points.append(points[0]); user_wins.append(wins[0])
+        user_mw_bonus.append(1 if mw_bonus[0] > 0 else 0)
+        user_mp_bonus.append(1 if mp_bonus[0] > 0 else 0)
+    
+    user_totals = np.array(user_totals); user_points = np.array(user_points); user_wins = np.array(user_wins)
+    user_mw_bonus = np.array(user_mw_bonus); user_mp_bonus = np.array(user_mp_bonus)
+    
+    summary = {
+        "strategy": "Custom-User",
+        "expected_base_points": float(user_points.mean()),
+        "expected_wins": float(user_wins.mean()),
+        "P(get_Most_Wins_bonus)": float(user_mw_bonus.mean()),
+        "P(get_Most_Points_bonus)": float(user_mp_bonus.mean()),
+        "expected_bonus_points": float(5*user_mw_bonus.mean() + 10*user_mp_bonus.mean()),
+        "expected_total_points": float(user_totals.mean()),
+        "stdev_total_points": float(user_totals.std(ddof=1)),
+        "p10_total_points": float(np.percentile(user_totals, 10)),
+        "p50_total_points": float(np.percentile(user_totals, 50)),
+        "p90_total_points": float(np.percentile(user_totals, 90)),
+    }
+    
+    return summary, picks, confidence
+
+def analyze_user_picks(user_picks: np.ndarray, user_confidence: np.ndarray, 
+                      week_mapping: list[dict], game_probs: np.ndarray) -> dict:
+    """
+    Analyze user picks to identify contrarian choices, risk level, and expected value.
+    """
+    analysis = {
+        "total_games": len(week_mapping),
+        "contrarian_picks": [],
+        "high_confidence_games": [],
+        "low_confidence_games": [],
+        "expected_wins": 0.0,
+        "risk_assessment": "Unknown"
+    }
+    
+    contrarian_count = 0
+    expected_correct = 0.0
+    
+    for pick, conf, game, prob in zip(user_picks, user_confidence, week_mapping, game_probs):
+        game_analysis = {
+            "game": f"{game['away_team']} at {game['home_team']}",
+            "pick": game["favorite"] if pick == 1 else game["dog"],
+            "confidence": int(conf),
+            "is_contrarian": pick == 0,
+            "favorite_prob": float(prob),
+            "pick_prob": float(prob if pick == 1 else 1 - prob)
+        }
+        
+        if pick == 0:  # Contrarian pick
+            contrarian_count += 1
+            analysis["contrarian_picks"].append(game_analysis)
+        
+        if conf >= 13:  # High confidence
+            analysis["high_confidence_games"].append(game_analysis)
+        elif conf <= 4:  # Low confidence
+            analysis["low_confidence_games"].append(game_analysis)
+        
+        # Calculate expected wins
+        expected_correct += game_analysis["pick_prob"]
+    
+    analysis["expected_wins"] = expected_correct
+    analysis["contrarian_count"] = contrarian_count
+    
+    # Risk assessment
+    if contrarian_count == 0:
+        analysis["risk_assessment"] = "Conservative (no contrarian picks)"
+    elif contrarian_count <= 2:
+        analysis["risk_assessment"] = "Moderate (limited contrarian picks)"
+    else:
+        analysis["risk_assessment"] = "Aggressive (multiple contrarian picks)"
+    
+    return analysis
+
+# ===============================
 # 4) SIMULATOR (same as original, + optional tie-splitting)
 # ===============================
 
@@ -393,7 +674,72 @@ def simulate_many_weeks(p, your_strategy_name, others_mix, n_sims=5000):
     return summary
 
 # ===============================
-# 5) VALIDATION & DISPLAY
+# 5) PREDICTION STORAGE
+# ===============================
+
+def save_predictions(strategy_name: str, picks: np.ndarray, confidence: np.ndarray, 
+                    week_mapping: list[dict], game_probs: np.ndarray = None) -> str:
+    """
+    Save strategy predictions to JSON file following the existing file naming pattern.
+    Returns the filename of the saved file.
+    """
+    # Create out directory if it doesn't exist
+    os.makedirs("out", exist_ok=True)
+    
+    # Get current week and timestamp
+    current_week = get_current_nfl_week()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    strategy_code = STRATEGY_CODES.get(strategy_name, strategy_name.lower().replace("-", ""))
+    
+    # Build filename following existing pattern
+    filename = f"week_{current_week}_predictions_{strategy_code}_{timestamp}.json"
+    filepath = os.path.join("out", filename)
+    
+    # Build prediction data structure
+    predictions = {
+        "metadata": {
+            "strategy": strategy_name,
+            "week": current_week,
+            "generated_at": datetime.now().isoformat(),
+            "total_games": len(week_mapping),
+            "simulator_version": "v2"
+        },
+        "games": []
+    }
+    
+    # Add each game with predictions
+    for i, game in enumerate(week_mapping):
+        pick_team = game["favorite"] if picks[i] == 1 else game["dog"]
+        pick_is_favorite = bool(picks[i] == 1)
+        
+        game_data = {
+            "game_id": game.get("id", f"game_{i+1}"),
+            "away_team": game["away_team"],
+            "home_team": game["home_team"],
+            "favorite": game["favorite"],
+            "dog": game["dog"],
+            "favorite_prob": float(game["p_fav"]),
+            "commence_time": game.get("commence_time"),
+            "prediction": {
+                "pick_team": pick_team,
+                "pick_is_favorite": pick_is_favorite,
+                "confidence_level": int(confidence[i]),
+                "confidence_rank": int(len(week_mapping) - confidence[i] + 1)  # 1 = highest confidence
+            }
+        }
+        predictions["games"].append(game_data)
+    
+    # Sort games by confidence level (highest first)
+    predictions["games"].sort(key=lambda x: x["prediction"]["confidence_level"], reverse=True)
+    
+    # Save to file
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(predictions, f, indent=2, ensure_ascii=False)
+    
+    return filename
+
+# ===============================
+# 6) VALIDATION & DISPLAY
 # ===============================
 
 def validate_slate(mapping: list[dict], min_g=SLATE_MIN_GAMES, max_g=SLATE_MAX_GAMES):
@@ -415,11 +761,29 @@ def validate_slate(mapping: list[dict], min_g=SLATE_MIN_GAMES, max_g=SLATE_MAX_G
         print(f" {i:>2}. {fav} vs {dog} | p_fav={p:.3f} | commence={when}")
 
 # ===============================
-# 6) MAIN
+# 8) COMMAND LINE INTERFACE
+# ===============================
+
+def parse_arguments():
+    """Parse command line arguments for user picks."""
+    parser = argparse.ArgumentParser(description="NFL Confidence Pool Strategy Simulator")
+    parser.add_argument("--user-picks", type=str, 
+                       help="Comma-separated list of team names in confidence order (16->1)")
+    parser.add_argument("--picks-file", type=str,
+                       help="Path to JSON file containing user picks")
+    parser.add_argument("--analyze-only", action="store_true",
+                       help="Only analyze user picks, skip built-in strategies")
+    return parser.parse_args()
+
+# ===============================
+# 9) MAIN
 # ===============================
 
 def main():
-    # 6a) Build GAME_PROBS from API (or fallback)
+    # Parse command line arguments
+    args = parse_arguments()
+    
+    # Build GAME_PROBS from API (or fallback)
     try:
         GAME_PROBS, WEEK_MAPPING = get_weekly_GAME_PROBS_from_odds()
         print(f"Loaded {len(GAME_PROBS)} games from The Odds API.")
@@ -427,10 +791,61 @@ def main():
         print("[WARN] Odds fetch failed, using fallback slate. Reason:", str(e))
         GAME_PROBS, WEEK_MAPPING = fallback_GAME_PROBS()
 
-    # 6b) Validate slate size & preview
+    # Validate slate size & preview
     validate_slate(WEEK_MAPPING)
 
-    # 6c) Compare user strategies vs the field
+    # Handle user picks if provided
+    user_summary = None
+    user_picks = None
+    user_confidence = None
+    
+    if args.user_picks or args.picks_file:
+        print("\n" + "="*60)
+        print("ANALYZING YOUR CUSTOM PICKS")
+        print("="*60)
+        
+        try:
+            if args.picks_file:
+                # Load from JSON file
+                with open(args.picks_file, 'r') as f:
+                    picks_data = json.load(f)
+                user_input = picks_data.get("picks", [])
+            else:
+                user_input = args.user_picks
+            
+            # Simulate user picks
+            result = simulate_user_picks(user_input, WEEK_MAPPING, GAME_PROBS, STRATEGY_MIX)
+            if result:
+                user_summary, user_picks, user_confidence = result
+                
+                # Analyze picks
+                analysis = analyze_user_picks(user_picks, user_confidence, WEEK_MAPPING, GAME_PROBS)
+                
+                print(f"\nYour Custom Pick Analysis:")
+                print(f"Expected Performance: {user_summary['expected_total_points']:.2f} total points")
+                print(f"Expected Wins: {user_summary['expected_wins']:.2f}")
+                print(f"Risk Assessment: {analysis['risk_assessment']}")
+                print(f"Contrarian Picks: {analysis['contrarian_count']}")
+                
+                if analysis['contrarian_picks']:
+                    print(f"\nContrarian Games:")
+                    for game in analysis['contrarian_picks']:
+                        print(f"  {game['game']} -> {game['pick']} (Conf: {game['confidence']}, Prob: {game['pick_prob']:.1%})")
+                
+                # Save user predictions
+                user_filename = save_predictions("Custom-User", user_picks, user_confidence, WEEK_MAPPING, GAME_PROBS)
+                print(f"\nYour picks saved to: out/{user_filename}")
+                
+        except Exception as e:
+            print(f"Error analyzing user picks: {e}")
+            return
+    
+    # Skip built-in strategies if analyze-only mode
+    if args.analyze_only and user_summary:
+        print(f"\nAnalysis complete. Your expected performance: {user_summary['expected_total_points']:.2f} points")
+        return
+
+    # Compare strategies vs the field
     USER_STRATEGIES_TO_TEST = [
         "Chalk-MaxPoints",
         "Slight-Contrarian",
@@ -443,8 +858,15 @@ def main():
         summary = simulate_many_weeks(GAME_PROBS, sname, STRATEGY_MIX, n_sims=N_SIMS)
         results.append(summary)
 
+    # Add user picks to comparison if provided
+    if user_summary:
+        results.append(user_summary)
+
     df = pd.DataFrame(results).sort_values("expected_total_points", ascending=False)
+    
     print("\nConfidence Pool Strategy — Monte Carlo Summary")
+    if user_summary:
+        print("(Including your custom picks)")
     print(df.round(4).to_string(index=False))
 
     # 6d) Plot
@@ -457,8 +879,15 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Save CSV
-    out_path = "confidence_pool_strategy_summary.csv"
+    # Save strategy summary CSV following established naming pattern
+    current_week = get_current_nfl_week()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_filename = f"week_{current_week}_strategy_summary_{timestamp}.csv"
+    out_path = os.path.join("out", out_filename)
+    
+    # Ensure out directory exists
+    os.makedirs("out", exist_ok=True)
+    
     df.to_csv(out_path, index=False)
     print(f"\nSaved: {out_path}")
 
@@ -468,6 +897,18 @@ def main():
 
     # Generate picks + confidence ordering
     picks, conf = my_strategy(GAME_PROBS)
+
+    # Save predictions to file
+    saved_filename = save_predictions(my_strategy_name, picks, conf, WEEK_MAPPING, GAME_PROBS)
+    print(f"\nPredictions saved to: out/{saved_filename}")
+
+    # Also save predictions for all strategies tested
+    print("\nSaving predictions for all tested strategies...")
+    for strategy_name in USER_STRATEGIES_TO_TEST:
+        strategy_func = STRATEGIES[strategy_name]
+        strategy_picks, strategy_conf = strategy_func(GAME_PROBS)
+        strategy_filename = save_predictions(strategy_name, strategy_picks, strategy_conf, WEEK_MAPPING, GAME_PROBS)
+        print(f"  {strategy_name}: out/{strategy_filename}")
 
     print(f"\nYour picks this week using {my_strategy_name}:\n")
     for i, g in enumerate(WEEK_MAPPING, 1):

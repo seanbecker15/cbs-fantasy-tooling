@@ -77,16 +77,23 @@ def __scrape_week_standings(driver, max_wait_time) -> list[Row]:
         # Number of wins and losses are in the remaining cells
         wins = 0
         losses = 0
+        picks = []
         for cell in cells[3:]:
             cell_type = __get_cell_type(cell)
             if cell_type == "win":
                 wins += 1
             elif cell_type == "loss":
                 losses += 1
+            
+            cell_text = __get_cell_text(cell)
+            pick_details = __parse_pick(cell_text)
+            if pick_details:
+                picks.append(pick_details)
 
         row_obj = Row()
         row_obj.name = player_name
         row_obj.results = [player_points, wins, losses]
+        row_obj.picks = picks
         parsed_rows.append(row_obj)
         print(
             f"Player: {player_name}, Points: {player_points}, Wins: {wins}, Losses: {losses}")
@@ -113,6 +120,28 @@ def __get_cell_type(cell: WebElement) -> str:
 
     return "unknown"
 
+def __get_cell_text(cell: WebElement) -> str:
+    # Get cell text (e.g. "SEA (12)")
+    try:
+        spans = cell.find_elements(By.TAG_NAME, "span")
+        if spans and len(spans) == 2:
+            return spans[0].text + " " + spans[1].text
+    except:
+        pass
+
+    return ""
+
+def __parse_pick(pick: str) -> dict:
+    # Example pick: "SEA (12)"
+    parts = pick.split(" ")
+    if len(parts) != 2:
+        return {}
+    team = parts[0]
+    points = parts[1].replace("(", "").replace(")", "")
+    return {
+        "team": team,
+        "points": points
+    }
 
 def __print_csv(results):
     csv = "Name,Points,Wins,Losses\n"

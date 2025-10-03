@@ -1,7 +1,21 @@
+# System files
 .DS_Store
+
+# Environment files
 .env
+
+# Output directories
 out
-__pycache__
-.vscode
+
+# Python cache files
+__pycache__/
+
+# IDE-specific files
+.vscode/
+
+# Sensitive credentials
 credentials.json
 token.json
+
+# Virtual environments
+venv/
