@@ -38,6 +38,12 @@ class Config:
         
         # Week configuration
         self.week_one_start_date = os.getenv("WEEK_ONE_START_DATE", "2025-09-02")
+
+        # User configuration
+        self.user_name = os.getenv("USER_NAME")
+
+        # The Odds API configuration
+        self.the_odds_api_key = os.getenv("THE_ODDS_API_KEY")
     
     def _parse_recipients(self, recipients_str: Optional[str]) -> List[str]:
         if not recipients_str:

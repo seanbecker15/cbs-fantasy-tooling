@@ -69,11 +69,22 @@ STRATEGY_CODES = {
 }
 
 # Field composition (others in your 32-person league)
-STRATEGY_MIX = {
-    "Chalk-MaxPoints": 16,
-    "Slight-Contrarian": 10,
-    "Aggressive-Contrarian": 5,
-}
+# UPDATED: Using actual field composition from historical data analysis
+try:
+    from field_adapter import get_actual_field_composition
+    USER_NAME = os.getenv("USER_NAME")
+    STRATEGY_MIX = get_actual_field_composition(exclude_user=USER_NAME)
+    print(f"Using ACTUAL field composition from historical data (excluding {USER_NAME}):")
+    print(f"  Chalk: {STRATEGY_MIX['Chalk-MaxPoints']}, Slight: {STRATEGY_MIX['Slight-Contrarian']}, Aggressive: {STRATEGY_MIX['Aggressive-Contrarian']}")
+except ImportError:
+    # Fallback to theoretical if field_adapter not available
+    STRATEGY_MIX = {
+        "Chalk-MaxPoints": 16,
+        "Slight-Contrarian": 10,
+        "Aggressive-Contrarian": 5,
+    }
+    print("Warning: Using THEORETICAL field composition (field_adapter not found)")
+
 assert sum(STRATEGY_MIX.values()) == N_OTHERS, "STRATEGY_MIX must sum to 31."
 
 # ===============================
@@ -746,7 +757,23 @@ def validate_slate(mapping: list[dict], min_g=SLATE_MIN_GAMES, max_g=SLATE_MAX_G
     n = len(mapping)
     if n == 0:
         print("[ERROR] No games found for the current week window.")
-        return
+        sys.exit(1)
+
+    # Check for missing games (likely already started or API issues)
+    EXPECTED_MIN_GAMES = 14  # Typical NFL week (adjust for bye weeks)
+    if n < EXPECTED_MIN_GAMES:
+        print(f"[WARNING] Only {n} games found (expected {EXPECTED_MIN_GAMES}+ for typical week)")
+        print("          Possible causes:")
+        print("          - Some games have already started (excluded from betting markets)")
+        print("          - API issues or rate limiting")
+        print("          - Bye weeks (Weeks 5-14 typically have 13-14 games)")
+
+        # Interactive confirmation
+        response = input(f"\nContinue with only {n} games? (y/n): ").strip().lower()
+        if response != 'y':
+            print("Exiting. Please check game schedule and run simulator before games start.")
+            sys.exit(1)
+
     if not (min_g <= n <= max_g):
         print(f"[WARN] Unexpected number of games returned: {n} (expected {min_g}–{max_g}).")
         print("       Check time window, bye weeks, or API filters.")
