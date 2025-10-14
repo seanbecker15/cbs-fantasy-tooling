@@ -1,4 +1,6 @@
 import os
+import sys
+import select
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -9,6 +11,19 @@ from selenium.webdriver.chrome.options import Options
 from time import sleep
 
 login_page_url = 'https://www.cbssports.com/login?masterProductId=41010&product_abbrev=opm&show_opts=1&xurl=https%3A%2F%2Fpicks.cbssports.com%2Ffootball%2Fpickem%2Fpools%2Fizxw65dcmfwgyudjmnvwk3knmfxgcz3fojig633mhiytgobtgq2deoi%253D%2Fstandings%2Fweekly%3Fdevice%3Ddesktop%26device%3Ddesktop'
+
+
+def __wait_for_user_input(timeout_seconds=30):
+    """Wait for user input with a timeout. Returns True if user pressed Enter, False if timeout."""
+    print(f"Press Enter to continue (will auto-continue in {timeout_seconds} seconds)...")
+    
+    # Use select to check if input is available
+    if sys.stdin in select.select([sys.stdin], [], [], timeout_seconds)[0]:
+        input()  # Consume the input
+        return True
+    else:
+        print(f"\nTimeout reached after {timeout_seconds} seconds, continuing automatically...")
+        return False
 
 
 def __navigate_login(driver, max_wait_time, email: str, password: str) -> int:
@@ -28,8 +43,8 @@ def __navigate_login(driver, max_wait_time, email: str, password: str) -> int:
         password_el.send_keys(password)
         button_el = WebDriverWait(driver, max_wait_time).until(
             EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Continue')]")))
-        print('Logging in in 5 seconds...')
-        sleep(5)
+
+        sleep(5)        
         button_el.click()
     except TimeoutException:
         print("It took too much time to load specified elements.")
@@ -184,7 +199,8 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
     driver = webdriver.Chrome(options=chrome_options)
 
     __navigate_login(driver, max_wait_time, email, password)
-    sleep(5)
+    __wait_for_user_input(30)
+
 
     i = curr_week_number
     succeeded = False
