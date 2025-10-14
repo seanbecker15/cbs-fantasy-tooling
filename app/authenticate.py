@@ -10,8 +10,11 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-# Gmail API scope for sending emails
-SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+# Gmail API scopes for sending emails and reading profile
+SCOPES = [
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.readonly'
+]
 
 def authenticate_gmail():
     """Authenticate with Gmail API and save token for future use"""
