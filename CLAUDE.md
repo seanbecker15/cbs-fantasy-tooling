@@ -55,13 +55,14 @@ This is a Python-based web scraping tool that automatically extracts fantasy spo
 ### 5. Confidence Pool Strategy Simulator (`simulator/`)
 - **`main.py`** - Comprehensive NFL confidence pool strategy simulation with real-time odds integration
 - **`monte.py`** - Standalone Monte Carlo simulation engine for confidence pool strategy analysis
+- **`game_results_fetcher.py`** - Fetches historical NFL game results from ESPN API for competitive intelligence analysis
 - **`example_result.md`** - Sample output showing simulation results and strategy recommendations
 
 #### Simulator Features:
 - **Real-time Odds Integration**: Fetches current week NFL moneylines from The Odds API
 - **De-vig Probability Calculation**: Converts betting odds to fair win probabilities using median consensus across multiple sportsbooks
 - **Sharp Book Weighting**: Overweights reputable books like Pinnacle and Circa for more accurate probabilities
-- **Multiple Strategy Support**: 
+- **Multiple Strategy Support**:
   - `Chalk-MaxPoints`: Pure favorite-picking, confidence ordered by probability
   - `Slight-Contrarian`: Strategic contrarian picks on coin-flip games with mid-confidence boosts
   - `Aggressive-Contrarian`: Multiple contrarian picks including moderate underdogs
@@ -75,6 +76,7 @@ This is a Python-based web scraping tool that automatically extracts fantasy spo
 - **CSV Export**: Exports detailed strategy comparison results for analysis
 - **Prediction Storage**: Automatically saves strategy predictions in structured JSON format using standardized file naming
 - **Custom Pick Analysis**: Input your own picks for Monte Carlo simulation and performance analysis against the field
+- **Historical Game Results**: Automatically fetches NFL game outcomes from ESPN API for competitive intelligence and back-testing
 
 ## Configuration Requirements
 
@@ -92,6 +94,8 @@ Publisher configuration (via `ENABLED_PUBLISHERS` setting):
 
 Simulator configuration:
 - `THE_ODDS_API_KEY` - Required API key from The Odds API for real-time NFL moneylines
+- `WEEK_ONE_START_DATE` - Season start date in YYYY-MM-DD format (default: "2025-09-02")
+- `OUTPUT_DIR` - Output directory for results and data files (default: "out")
 
 ### Dependencies
 Key Python packages from `requirements.txt`:
@@ -299,5 +303,80 @@ Contrarian Games:
 ```
 
 The simulator provides comprehensive strategy analysis for NFL confidence pools, helping optimize weekly performance through data-driven decision making. It integrates real-time betting market data to generate the most accurate probability assessments available.
+
+### Fetching Historical Game Results
+
+The game results fetcher automatically downloads NFL game outcomes from ESPN API for competitive intelligence analysis and back-testing strategies.
+
+#### Auto-Detection Mode (Recommended)
+```bash
+# Automatically fetches missing weeks based on WEEK_ONE_START_DATE
+python simulator/game_results_fetcher.py
+```
+
+The script will:
+1. Calculate the current NFL week from `WEEK_ONE_START_DATE` environment variable
+2. Scan the output directory to identify missing weeks
+3. Fetch only the weeks that haven't been downloaded yet
+4. Save results as JSON files (e.g., `week_1_game_results.json`)
+
+If all weeks are up-to-date, it exits gracefully:
+```
+✓ All weeks up to Week 6 are already fetched!
+  Output directory: out
+
+Nothing to fetch. Use --weeks to fetch specific weeks.
+```
+
+#### Manual Week Selection
+```bash
+# Fetch specific weeks (comma-separated)
+python simulator/game_results_fetcher.py --weeks=1,2,3,4 --year=2025
+
+# Fetch week range
+python simulator/game_results_fetcher.py --weeks=1-5 --year=2025
+
+# Fetch single week
+python simulator/game_results_fetcher.py --weeks=3 --year=2024
+
+# Override output directory
+python simulator/game_results_fetcher.py --weeks=1-3 --output-dir=backups
+```
+
+#### Command Line Options
+- `--weeks`: Comma-separated week numbers (e.g., `1,2,3,4`) or range (e.g., `1-5`). Omit for auto-detection.
+- `--year`: NFL season year (default: `2025`)
+- `--output-dir`: Output directory (default: value from `OUTPUT_DIR` env variable or `out`)
+
+#### Game Results JSON Structure
+Each week file contains structured game data:
+```json
+{
+  "week": 5,
+  "season": 2025,
+  "num_games": 14,
+  "games": [
+    {
+      "game_id": "401772939",
+      "week": 5,
+      "season": 2025,
+      "away_team": "SF",
+      "home_team": "LAR",
+      "away_score": 26,
+      "home_score": 23,
+      "winner": "SF",
+      "loser": "LAR",
+      "completed": true,
+      "game_date": "2025-10-03T00:15Z"
+    }
+  ]
+}
+```
+
+#### Use Cases
+- **Competitive Intelligence**: Analyze opponent pick patterns and outcomes
+- **Strategy Back-Testing**: Evaluate historical performance of different strategies
+- **Automated Analysis**: Run scheduled jobs to fetch latest results for analysis pipelines
+- **Data Enrichment**: Combine with prediction files to calculate actual vs. expected performance
 
 This tool automates the tedious process of manually checking fantasy football results and ensures all league participants receive timely updates via email with detailed standings data. The simulator component adds advanced analytics for confidence pool strategy optimization.

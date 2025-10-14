@@ -68,6 +68,56 @@ STRATEGY_CODES = {
     "Custom-User": "user"
 }
 
+# ===============================
+# 0.5) AUTO-FETCH MISSING GAME RESULTS
+# ===============================
+
+def ensure_game_results_available(data_dir="../out", season=2025):
+    """
+    Automatically fetch missing game results from ESPN API.
+    Checks weeks 1-current and fetches any missing game result files.
+    """
+    import glob
+
+    # Determine which weeks have player picks
+    picks_pattern = os.path.join(data_dir, "week_*_results_*.json")
+    picks_files = glob.glob(picks_pattern)
+
+    weeks_with_picks = set()
+    for f in picks_files:
+        # Extract week number from filename like "week_5_results_20251008_101907.json"
+        basename = os.path.basename(f)
+        if basename.startswith("week_") and "_results_" in basename:
+            try:
+                week_num = int(basename.split("_")[1])
+                weeks_with_picks.add(week_num)
+            except (IndexError, ValueError):
+                continue
+
+    if not weeks_with_picks:
+        return  # No player picks data yet
+
+    # Check which weeks are missing game results
+    missing_weeks = []
+    for week in sorted(weeks_with_picks):
+        results_file = os.path.join(data_dir, f"week_{week}_game_results.json")
+        if not os.path.exists(results_file):
+            missing_weeks.append(week)
+
+    # Fetch missing game results
+    if missing_weeks:
+        print(f"Fetching missing game results for weeks: {missing_weeks}")
+        try:
+            sys.path.insert(0, os.path.dirname(__file__))  # Ensure simulator modules are importable
+            from game_results_fetcher import fetch_game_results
+            fetch_game_results(weeks=missing_weeks, season=season, save_json=True)
+            print(f"✓ Successfully fetched game results for weeks {missing_weeks}")
+        except Exception as e:
+            print(f"Warning: Could not fetch game results: {e}")
+
+# Auto-fetch missing game results before loading field composition
+ensure_game_results_available()
+
 # Field composition (others in your 32-person league)
 # UPDATED: Using actual field composition from historical data analysis
 try:
@@ -76,14 +126,17 @@ try:
     STRATEGY_MIX = get_actual_field_composition(exclude_user=USER_NAME)
     print(f"Using ACTUAL field composition from historical data (excluding {USER_NAME}):")
     print(f"  Chalk: {STRATEGY_MIX['Chalk-MaxPoints']}, Slight: {STRATEGY_MIX['Slight-Contrarian']}, Aggressive: {STRATEGY_MIX['Aggressive-Contrarian']}")
-except ImportError:
-    # Fallback to theoretical if field_adapter not available
+except (ImportError, FileNotFoundError) as e:
+    # Fallback to theoretical if field_adapter not available or data incomplete
     STRATEGY_MIX = {
         "Chalk-MaxPoints": 16,
         "Slight-Contrarian": 10,
         "Aggressive-Contrarian": 5,
     }
-    print("Warning: Using THEORETICAL field composition (field_adapter not found)")
+    if isinstance(e, FileNotFoundError):
+        print("Warning: Incomplete historical data. Using THEORETICAL field composition.")
+    else:
+        print("Warning: Using THEORETICAL field composition (field_adapter not found)")
 
 assert sum(STRATEGY_MIX.values()) == N_OTHERS, "STRATEGY_MIX must sum to 31."
 

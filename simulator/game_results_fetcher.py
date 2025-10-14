@@ -11,10 +11,12 @@ Data Sources:
 
 import json
 import requests
-from typing import Dict, List, Optional
+from typing import Dict, List
 from datetime import datetime
 from dataclasses import dataclass, asdict
 import time
+import os
+from pathlib import Path
 
 
 @dataclass
@@ -304,7 +306,7 @@ class NFLGameResultsFetcher:
             print(f"✓ Saved Week {week} results to {filename}")
 
 
-def fetch_game_results(weeks: List[int], season: int = 2025, save_json: bool = True) -> Dict[int, List[GameResult]]:
+def fetch_game_results(weeks: List[int], season: int = 2025, save_json: bool = True, output_dir: str = "out") -> Dict[int, List[GameResult]]:
     """
     Convenience function to fetch game results for multiple weeks.
 
@@ -312,6 +314,7 @@ def fetch_game_results(weeks: List[int], season: int = 2025, save_json: bool = T
         weeks: List of week numbers to fetch
         season: NFL season year
         save_json: Whether to save results to JSON files
+        output_dir: Output directory for JSON files
 
     Returns:
         Dictionary mapping week number to list of GameResults
@@ -320,31 +323,177 @@ def fetch_game_results(weeks: List[int], season: int = 2025, save_json: bool = T
     results = fetcher.fetch_multiple_weeks(weeks)
 
     if save_json:
-        fetcher.save_results_to_json(results)
+        fetcher.save_results_to_json(results, output_dir=output_dir)
 
     return results
 
+def get_weeks_since_start(start_date: str) -> int:
+    """
+    Calculate current NFL week based on start date.
+
+    Args:
+        start_date: Season start date in 'YYYY-MM-DD' format
+
+    Returns:
+        Current week number (1-18)
+    """
+    now = datetime.now()
+    weeks_elapsed = (now - datetime.strptime(start_date, '%Y-%m-%d')).days // 7
+    # Clamp to valid week range (1-18)
+    return min(max(weeks_elapsed, 1), 18)
+
+
+def get_missing_weeks(output_dir: str, current_week: int) -> List[int]:
+    """
+    Determine which weeks are missing from the output directory.
+
+    Args:
+        output_dir: Directory to check for existing week files
+        current_week: Current NFL week number
+
+    Returns:
+        List of week numbers that need to be fetched
+    """
+    # Check which weeks already exist
+    existing_weeks = set()
+    output_path = Path(output_dir)
+
+    if output_path.exists():
+        for file in output_path.glob("week_*_game_results.json"):
+            try:
+                # Extract week number from filename like "week_1_game_results.json"
+                week_str = file.stem.split('_')[1]
+                week_num = int(week_str)
+                existing_weeks.add(week_num)
+            except (IndexError, ValueError):
+                continue
+
+    # Return weeks 1 through current_week that don't exist
+    all_weeks = set(range(1, current_week + 1))
+    missing_weeks = sorted(all_weeks - existing_weeks)
+
+    return missing_weeks
+
 
 if __name__ == "__main__":
+    import argparse
+    from dotenv import load_dotenv
+
+    # Load environment variables
+    load_dotenv()
+
+    parser = argparse.ArgumentParser(
+        description='Fetch NFL game results from ESPN API',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Auto-detect missing weeks (default behavior)
+  %(prog)s
+
+  # Fetch specific weeks for 2025 season
+  %(prog)s --weeks=1,2,3,4 --year=2025
+
+  # Fetch single week
+  %(prog)s --weeks=1 --year=2024
+
+  # Use range notation
+  %(prog)s --weeks=1-5 --year=2025
+        """
+    )
+    parser.add_argument(
+        '--weeks',
+        type=str,
+        default=None,
+        help='Comma-separated week numbers (e.g., 1,2,3,4) or range (e.g., 1-4). Default: auto-detect missing weeks'
+    )
+    parser.add_argument(
+        '--year',
+        type=int,
+        default=2025,
+        help='NFL season year. Default: 2025'
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default=None,
+        help='Output directory for JSON files. Default: value from OUTPUT_DIR env variable or "out"'
+    )
+
+    args = parser.parse_args()
+
+    # Get output directory from env variable or use default
+    output_dir = args.output_dir or os.getenv('OUTPUT_DIR', 'out')
+
     print("=" * 60)
     print("NFL GAME RESULTS FETCHER - ESPN API")
     print("=" * 60)
 
-    # Fetch Weeks 1-4 for 2025 season
-    weeks_to_fetch = [1, 2, 3, 4]
+    # Determine weeks to fetch
+    weeks_to_fetch = []
 
-    print(f"\nFetching game results for Weeks {weeks_to_fetch}...")
+    if args.weeks is None:
+        # Auto-detect missing weeks using environment variable
+        week_one_start = os.getenv('WEEK_ONE_START_DATE', '2025-09-02')
+        current_week = get_weeks_since_start(week_one_start)
+        missing_weeks = get_missing_weeks(output_dir, current_week)
+
+        if missing_weeks:
+            weeks_to_fetch = missing_weeks
+            print(f"\nSeason Start: {week_one_start}")
+            print(f"Current Week: {current_week}")
+            print(f"Missing Weeks: {missing_weeks}")
+        else:
+            print(f"\n✓ All weeks up to Week {current_week} are already fetched!")
+            print(f"  Output directory: {output_dir}")
+            print("\nNothing to fetch. Use --weeks to fetch specific weeks.")
+            exit(0)
+    else:
+        # Parse weeks argument - support both comma-separated and range format
+        if '-' in args.weeks and ',' not in args.weeks:
+            # Range format: "1-4"
+            try:
+                start, end = args.weeks.split('-')
+                weeks_to_fetch = list(range(int(start), int(end) + 1))
+            except ValueError:
+                print(f"Error: Invalid week range format '{args.weeks}'. Use format like '1-4'")
+                exit(1)
+        else:
+            # Comma-separated format: "1,2,3,4"
+            try:
+                weeks_to_fetch = [int(w.strip()) for w in args.weeks.split(',')]
+            except ValueError:
+                print(f"Error: Invalid week format '{args.weeks}'. Use comma-separated numbers like '1,2,3,4'")
+                exit(1)
+
+    # Validate weeks
+    if not weeks_to_fetch:
+        print("Error: No weeks specified")
+        exit(1)
+
+    if any(w < 1 or w > 18 for w in weeks_to_fetch):
+        print("Error: Week numbers must be between 1 and 18")
+        exit(1)
+
+    print(f"\nSeason: {args.year}")
+    print(f"Weeks to fetch: {weeks_to_fetch}")
+    print(f"Output directory: {output_dir}")
+
+    print(f"\nFetching game results...")
     print("-" * 60)
 
-    results = fetch_game_results(weeks=weeks_to_fetch, season=2025)
+    results = fetch_game_results(weeks=weeks_to_fetch, season=args.year, save_json=True, output_dir=output_dir)
 
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
 
+    total_games = sum(len(games) for games in results.values())
+    print(f"\nTotal: {len(results)} weeks, {total_games} games")
+
     for week, games in sorted(results.items()):
         print(f"\nWeek {week}: {len(games)} games")
         for game in games[:3]:  # Show first 3 games
-            print(f"  {game.away_team} @ {game.home_team}: {game.away_score}-{game.home_score} (Winner: {game.winner})")
+            status = "✓" if game.completed else "⏳"
+            print(f"  {status} {game.away_team} @ {game.home_team}: {game.away_score}-{game.home_score} (Winner: {game.winner})")
         if len(games) > 3:
             print(f"  ... and {len(games) - 3} more")
