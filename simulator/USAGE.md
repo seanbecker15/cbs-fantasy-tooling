@@ -33,7 +33,9 @@ USER_NAME=YourName  # Optional: for actual field composition
 
 **Run simulator with built-in strategies:**
 ```bash
-cd /path/to/cbs-fantasy-tooling
+# Fetch game results data up to current week
+python simulator/game_results_fetcher.py && \
+# Run simulations
 python simulator/main.py
 ```
 
@@ -273,7 +275,7 @@ python simulator/main.py --user-picks "Set2..." > results_set2.txt
 - **Avoid Friday-Monday**: Games in progress excluded from API results
 
 **Weekly workflow:**
-1. **Tuesday AM**: Run initial simulation with early lines
+1. **Tuesday AM**: Fetch previous week game data and run initial simulation with early lines
 2. **Thursday AM**: Re-run with settled lines (closer to accurate)
 3. **Thursday PM**: Finalize picks and submit
 
