@@ -67,7 +67,7 @@ def __navigate_week_standings(driver, max_wait_time, curr_week_number, target_we
 from storage import Row
 
 
-def __scrape_week_standings(driver, max_wait_time) -> list[Row]:
+def __scrape_week_standings(driver, max_wait_time, debug) -> list[Row]:
     # Search for a table with aria-label "Weekly Standings" and get all rows
     table = WebDriverWait(driver, max_wait_time).until(
         EC.presence_of_element_located((By.XPATH, "//table[@aria-label='Weekly Standings']")))
@@ -110,8 +110,9 @@ def __scrape_week_standings(driver, max_wait_time) -> list[Row]:
         row_obj.results = [player_points, wins, losses]
         row_obj.picks = picks
         parsed_rows.append(row_obj)
-        print(
-            f"Player: {player_name}, Points: {player_points}, Wins: {wins}, Losses: {losses}")
+        if debug:
+            print(
+                f"Player: {player_name}, Points: {player_points}, Wins: {wins}, Losses: {losses}")
 
     return parsed_rows
 
@@ -227,7 +228,7 @@ def run_scraper(curr_week_number: int, target_week_number: int) -> list[Row]:
 
     sleep(5)
 
-    results = __scrape_week_standings(driver, max_wait_time)
+    results = __scrape_week_standings(driver, max_wait_time, True)
     __print_csv(results)
     __print_most_wins(results)
     __print_most_points(results)

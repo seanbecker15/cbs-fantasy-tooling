@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -44,6 +45,13 @@ class Config:
 
         # The Odds API configuration
         self.the_odds_api_key = os.getenv("THE_ODDS_API_KEY")
+
+        # Supabase database configuration
+        self.supabase_url = os.getenv("SUPABASE_URL")
+        self.supabase_key = os.getenv("SUPABASE_KEY")
+
+        # Season configuration (year of the NFL season)
+        self.season = int(os.getenv("SEASON", datetime.now().year))
     
     def _parse_recipients(self, recipients_str: Optional[str]) -> List[str]:
         if not recipients_str:
@@ -70,7 +78,10 @@ class Config:
     
     def validate_dropbox_config(self) -> bool:
         return bool(self.dropbox_access_token)
-    
+
+    def validate_database_config(self) -> bool:
+        return bool(self.supabase_url and self.supabase_key)
+
     def get_publisher_config(self, publisher_name: str) -> Dict[str, Any]:
         """Get configuration specific to a publisher"""
         configs = {
@@ -96,6 +107,11 @@ class Config:
             "web": {
                 "output_dir": self.web_output_dir,
                 "title": self.web_title
+            },
+            "database": {
+                "url": self.supabase_url,
+                "key": self.supabase_key,
+                "season": self.season
             }
         }
         return configs.get(publisher_name, {})
