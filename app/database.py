@@ -138,9 +138,10 @@ CREATE POLICY "Enable delete for all users" ON game_status FOR DELETE USING (tru
 """
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from supabase import create_client, Client
 from storage import Row, ResultsData
+from game_status_fetcher import GameStatusRecord
 
 
 class SupabaseDatabase:
@@ -237,6 +238,105 @@ class SupabaseDatabase:
 
         except Exception as e:
             print(f"Error saving to database: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def upsert_game_statuses(self, game_statuses: List[Dict[str, Any]]) -> bool:
+        """
+        Upsert game status records into Supabase.
+
+        Args:
+            game_statuses: List of dictionaries representing game status rows
+
+        Returns:
+            True if upsert succeeded, False otherwise
+        """
+        if not game_statuses:
+            print("No game status updates to save")
+            return True
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        records = []
+
+        for status in game_statuses:
+            record = {**status}
+            record.setdefault('updated_at', timestamp)
+            records.append(record)
+
+        try:
+            self.client.table(self.game_status_table)\
+                .upsert(records, on_conflict='season,week_number,home_team,away_team')\
+                .execute()
+            print(f"Upserted {len(records)} game status records")
+            return True
+        except Exception as e:
+            print(f"Error upserting game status records: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def update_player_picks_from_game_statuses(self, game_statuses: List[GameStatusRecord]) -> bool:
+        """
+        Update player picks with opponent, game time, and correctness info.
+
+        Args:
+            game_statuses: List of GameStatusRecord instances
+
+        Returns:
+            True if updates succeeded, False otherwise
+        """
+        if not game_statuses:
+            print("No game status data available for pick updates")
+            return True
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        total_updates = 0
+
+        try:
+            for status in game_statuses:
+                game_time_iso = status.game_time.isoformat() if status.game_time else None
+                winner = status.winning_team
+
+                team_pairs = [
+                    (status.home_team, status.away_team),
+                    (status.away_team, status.home_team)
+                ]
+
+                for team, opponent in team_pairs:
+                    update_payload: Dict[str, Any] = {
+                        'opponent_team': opponent,
+                        'updated_at': timestamp,
+                        'is_correct': None
+                    }
+
+                    if game_time_iso:
+                        update_payload['game_time'] = game_time_iso
+                    else:
+                        update_payload['game_time'] = None
+
+                    if winner is not None:
+                        update_payload['is_correct'] = team == winner
+
+                    response = self.client.table(self.picks_table)\
+                        .update(update_payload)\
+                        .eq('season', status.season)\
+                        .eq('week_number', status.week)\
+                        .eq('team', team)\
+                        .execute()
+
+                    if response.data:
+                        total_updates += len(response.data)
+
+            if total_updates:
+                print(f"Updated {total_updates} player pick records with game metadata")
+            else:
+                print("No matching player picks found for game status updates")
+
+            return True
+
+        except Exception as e:
+            print(f"Error updating player picks with game data: {e}")
             import traceback
             traceback.print_exc()
             return False
