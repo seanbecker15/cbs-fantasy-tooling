@@ -26,8 +26,22 @@ class Publisher(ABC):
     def validate_config(self) -> bool:
         """
         Validate that the configuration is sufficient for this publisher.
-        
+
         Returns:
             bool: True if configuration is valid, False otherwise
         """
         pass
+
+    def test_authentication(self) -> bool:
+        """
+        Test that the publisher can authenticate successfully before scraping.
+
+        This is called before the scraper runs to fail fast if authentication
+        will fail. Publishers that require authentication should override this
+        method.
+
+        Returns:
+            bool: True if authentication succeeds or is not required, False otherwise
+        """
+        # Default implementation - no authentication required
+        return True

@@ -55,7 +55,25 @@ class GmailPublisher(Publisher):
                 token.write(creds.to_json())
         
         self.service = build('gmail', 'v1', credentials=creds)
-    
+
+    def test_authentication(self) -> bool:
+        """Test Gmail API authentication before scraping"""
+        try:
+            if not self.service:
+                self._authenticate()
+
+            # Test that we can access the API
+            self.service.users().getProfile(userId='me').execute()
+            print("✓ Gmail authentication successful")
+            return True
+
+        except HttpError as error:
+            print(f"✗ Gmail authentication failed: {error}")
+            return False
+        except Exception as error:
+            print(f"✗ Gmail authentication error: {error}")
+            return False
+
     def _create_message(self, results_data: ResultsData) -> str:
         """Create email message with CSV attachment"""
         msg = MIMEMultipart()

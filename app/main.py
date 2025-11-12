@@ -5,6 +5,7 @@ from storage import ResultsData, print_results_summary
 from publishers.email import GmailPublisher, SendGridPublisher
 from publishers.file import FilePublisher, DropboxPublisher
 from publishers.web import WebPublisher
+from publishers.database import DatabasePublisher
 
 override_target_week = None
 override_curr_week = None
@@ -61,8 +62,44 @@ def create_publishers(config: Config):
                 print("Dropbox publisher configuration invalid")
         except ImportError:
             print("Dropbox publisher not available - install dropbox package")
-    
+
+    # Database publisher
+    if config.is_publisher_enabled('database'):
+        database_pub = DatabasePublisher(config.get_publisher_config('database'))
+        if database_pub.validate_config():
+            publishers.append(('database', database_pub))
+        else:
+            print("Database publisher configuration invalid")
+
     return publishers
+
+
+def test_publisher_authentication(publishers):
+    """
+    Test authentication for all publishers before running the scraper.
+
+    This prevents wasting time scraping if publishers can't authenticate.
+
+    Args:
+        publishers: List of (name, publisher) tuples
+
+    Returns:
+        bool: True if all publishers can authenticate, False otherwise
+    """
+    print("\nTesting publisher authentication...")
+    all_authenticated = True
+
+    for name, publisher in publishers:
+        if not publisher.test_authentication():
+            all_authenticated = False
+            print(f"✗ {name} publisher authentication failed")
+
+    if all_authenticated:
+        print("✓ All publishers authenticated successfully\n")
+    else:
+        print("\n✗ Some publishers failed authentication. Fix issues before running scraper.\n")
+
+    return all_authenticated
 
 
 def publish_results(results_data: ResultsData, publishers):
@@ -144,9 +181,14 @@ def main():
     if not publishers:
         print("No publishers configured! Check ENABLED_PUBLISHERS setting.")
         return
-    
+
     print(f"Enabled publishers: {', '.join([name for name, _ in publishers])}")
-    
+
+    # Test authentication before scraping
+    if not test_publisher_authentication(publishers):
+        print("Aborting: Publisher authentication failed. Please resolve authentication issues.")
+        return
+
     try:
         # Run scraper
         raw_results = run_scraper(curr_week_no, prev_week_no)

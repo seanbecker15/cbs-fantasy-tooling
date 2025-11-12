@@ -41,6 +41,23 @@ class DatabasePublisher:
                 return False
         return True
 
+    def test_authentication(self) -> bool:
+        """Test database connection before scraping"""
+        if not self.db:
+            print("✗ Database publisher not initialized - invalid config")
+            return False
+
+        try:
+            if self.db.test_connection():
+                print("✓ Database connection successful")
+                return True
+            else:
+                print("✗ Database connection failed")
+                return False
+        except Exception as error:
+            print(f"✗ Database connection error: {error}")
+            return False
+
     def publish(self, results_data: ResultsData) -> bool:
         """
         Publish results to Supabase database.

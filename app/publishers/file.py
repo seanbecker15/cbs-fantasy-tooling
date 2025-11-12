@@ -73,7 +73,21 @@ class DropboxPublisher(Publisher):
     
     def validate_config(self) -> bool:
         return 'access_token' in self.config and self.config['access_token']
-    
+
+    def test_authentication(self) -> bool:
+        """Test Dropbox authentication before scraping"""
+        try:
+            dbx = dropbox.Dropbox(self.config['access_token'])
+            dbx.users_get_current_account()
+            print("✓ Dropbox authentication successful")
+            return True
+        except AuthError:
+            print("✗ Dropbox authentication failed. Check access token.")
+            return False
+        except Exception as error:
+            print(f"✗ Dropbox authentication error: {error}")
+            return False
+
     def publish(self, results_data: ResultsData) -> bool:
         """Upload results to Dropbox"""
         try:
