@@ -461,6 +461,65 @@ class WinScenarioAnalyzer:
 
         return result
 
+    def analyze_all_players_leaderboard(self, week: int) -> Dict:
+        """
+        Analyze win scenarios for ALL players and return leaderboard.
+
+        Args:
+            week: Week number
+
+        Returns:
+            Dictionary with leaderboard and metadata
+        """
+        # Get all player scores
+        player_scores = self.get_player_scores(week)
+
+        if not player_scores:
+            return {
+                'error': f"No players found in week {week} data"
+            }
+
+        # Get pending games for metadata
+        pending_games = self.get_pending_games(week)
+
+        # Analyze each player
+        leaderboard = []
+
+        print(f"Analyzing {len(player_scores)} players...")
+        for idx, player_name in enumerate(sorted(player_scores.keys()), 1):
+            print(f"  [{idx}/{len(player_scores)}] {player_name}...", end='\r')
+
+            # Run lightweight analysis (no detailed scenarios)
+            result = self.analyze_win_scenarios(
+                week=week,
+                target_player=player_name,
+                detailed=False
+            )
+
+            if 'error' not in result:
+                leaderboard.append({
+                    'player': player_name,
+                    'current_points': result['current_points'],
+                    'pending_picks': result['pending_picks'],
+                    'total_scenarios': result['total_scenarios'],
+                    'winning_scenarios': result['winning_scenarios'],
+                    'win_probability': result['win_probability'],
+                    'win_percentage': result['win_percentage']
+                })
+
+        print()  # Clear progress line
+
+        # Sort by win probability (descending)
+        leaderboard.sort(key=lambda x: x['win_probability'], reverse=True)
+
+        return {
+            'week': week,
+            'season': self.season,
+            'pending_games': len(pending_games),
+            'total_players': len(leaderboard),
+            'leaderboard': leaderboard
+        }
+
 
 def main():
     """CLI entry point."""
@@ -484,6 +543,11 @@ def main():
         help='Show detailed winning combinations'
     )
     parser.add_argument(
+        '--all-players',
+        action='store_true',
+        help='Analyze all players and show leaderboard (ignores --player flag)'
+    )
+    parser.add_argument(
         '--season',
         type=int,
         help='Season year (defaults to current year)'
@@ -501,17 +565,44 @@ def main():
         print("Error: SUPABASE_URL and SUPABASE_KEY must be set in .env file")
         sys.exit(1)
 
-    player_name = args.player or os.getenv('USER_NAME')
-    if not player_name:
-        print("Error: --player must be specified or USER_NAME must be set in .env")
-        sys.exit(1)
-
     # Create analyzer
     analyzer = WinScenarioAnalyzer(
         supabase_url=supabase_url,
         supabase_key=supabase_key,
         season=args.season
     )
+
+    # Handle all-players mode
+    if args.all_players:
+        result = analyzer.analyze_all_players_leaderboard(week=args.week)
+
+        if 'error' in result:
+            print(f"Error: {result['error']}")
+            sys.exit(1)
+
+        # Display leaderboard
+        print("=" * 70)
+        print(f"WIN PROBABILITY LEADERBOARD - Week {result['week']}")
+        print("=" * 70)
+        print(f"Season: {result['season']}")
+        print(f"Pending Games: {result['pending_games']}")
+        print(f"Total Players: {result['total_players']}")
+        print()
+        print(f"{'Rank':<6}{'Player':<25}{'Current':<10}{'Win Scenarios':<20}{'Probability':<12}")
+        print("-" * 70)
+
+        for idx, entry in enumerate(result['leaderboard'], 1):
+            scenarios = f"{entry['winning_scenarios']:,} / {entry['total_scenarios']:,}"
+            print(f"{idx:<6}{entry['player']:<25}{entry['current_points']:<10}{scenarios:<20}{entry['win_percentage']:<12}")
+
+        print("=" * 70)
+        sys.exit(0)
+
+    # Single-player mode
+    player_name = args.player or os.getenv('USER_NAME')
+    if not player_name:
+        print("Error: --player must be specified or USER_NAME must be set in .env")
+        sys.exit(1)
 
     # Run analysis
     result = analyzer.analyze_win_scenarios(

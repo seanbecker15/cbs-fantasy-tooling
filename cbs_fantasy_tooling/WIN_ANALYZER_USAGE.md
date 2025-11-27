@@ -111,11 +111,43 @@ This scenario means:
 
 ### Basic Usage
 
+Analyze your own win probability:
+
 ```bash
 python app/win_scenario_analyzer.py --week 12 --player "Your Name"
 ```
 
-Output:
+Analyze ALL players and show leaderboard:
+
+```bash
+python app/win_scenario_analyzer.py --week 12 --all-players
+```
+
+Leaderboard Output:
+```
+======================================================================
+WIN PROBABILITY LEADERBOARD - Week 12
+======================================================================
+Season: 2025
+Pending Games: 8
+Total Players: 32
+
+Rank  Player                   Current   Win Scenarios       Probability
+----------------------------------------------------------------------
+1     Alice Johnson            72        89 / 256            34.77%
+2     Bob Smith                68        47 / 256            18.36%
+3     Your Name                68        47 / 256            18.36%
+4     Carol Davis              70        42 / 256            16.41%
+5     Dave Wilson              66        38 / 256            14.84%
+6     Eve Martinez             65        31 / 256            12.11%
+7     Frank Thomas             64        28 / 256            10.94%
+8     Grace Lee                63        22 / 256             8.59%
+...
+32    Zack Brown               52         0 / 256             0.00%
+======================================================================
+```
+
+**Individual Player Analysis** Output:
 ```
 ============================================================
 WIN SCENARIO ANALYSIS - Week 12
