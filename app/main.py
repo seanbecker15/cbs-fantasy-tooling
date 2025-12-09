@@ -3,8 +3,7 @@ from scrape import run_scraper
 from config import Config
 from storage import ResultsData, print_results_summary
 from publishers.email import GmailPublisher, SendGridPublisher
-from publishers.file import FilePublisher, DropboxPublisher
-from publishers.web import WebPublisher
+from publishers.file import FilePublisher
 from publishers.database import DatabasePublisher
 
 override_target_week = None
@@ -36,33 +35,6 @@ def create_publishers(config: Config):
         else:
             print("Gmail publisher configuration invalid - check credentials file and recipients")
     
-    # SendGrid publisher (legacy)
-    if config.is_publisher_enabled('sendgrid'):
-        sendgrid_pub = SendGridPublisher(config.get_publisher_config('sendgrid'))
-        if sendgrid_pub.validate_config():
-            publishers.append(('sendgrid', sendgrid_pub))
-        else:
-            print("SendGrid publisher configuration invalid")
-    
-    # Web publisher
-    if config.is_publisher_enabled('web'):
-        web_pub = WebPublisher(config.get_publisher_config('web'))
-        if web_pub.validate_config():
-            publishers.append(('web', web_pub))
-        else:
-            print("Web publisher configuration invalid")
-    
-    # Dropbox publisher
-    if config.is_publisher_enabled('dropbox'):
-        try:
-            dropbox_pub = DropboxPublisher(config.get_publisher_config('dropbox'))
-            if dropbox_pub.validate_config():
-                publishers.append(('dropbox', dropbox_pub))
-            else:
-                print("Dropbox publisher configuration invalid")
-        except ImportError:
-            print("Dropbox publisher not available - install dropbox package")
-
     # Database publisher
     if config.is_publisher_enabled('database'):
         database_pub = DatabasePublisher(config.get_publisher_config('database'))

@@ -24,15 +24,7 @@ class Config:
         
         # File storage configuration
         self.output_dir = os.getenv("OUTPUT_DIR", "out")
-        self.backup_dir = os.getenv("BACKUP_DIR", "backups")
-        
-        # Dropbox configuration (optional)
-        self.dropbox_access_token = os.getenv("DROPBOX_ACCESS_TOKEN")
-        self.dropbox_folder = os.getenv("DROPBOX_FOLDER", "/3gs-results")
-        
-        # Web publishing configuration
-        self.web_output_dir = os.getenv("WEB_OUTPUT_DIR", "web")
-        self.web_title = os.getenv("WEB_TITLE", "3GS Fantasy Results")
+        self.backup_dir = os.getenv("BACKUP_DIR", None)
         
         # Publisher configuration - which publishers to use
         self.enabled_publishers = self._parse_enabled_publishers()
@@ -75,9 +67,6 @@ class Config:
     
     def validate_sendgrid_config(self) -> bool:
         return bool(self.sendgrid_api_key and self.notification_from and self.notification_to)
-    
-    def validate_dropbox_config(self) -> bool:
-        return bool(self.dropbox_access_token)
 
     def validate_database_config(self) -> bool:
         return bool(self.supabase_url and self.supabase_key)
@@ -99,14 +88,6 @@ class Config:
             "file": {
                 "output_dir": self.output_dir,
                 "backup_dir": self.backup_dir
-            },
-            "dropbox": {
-                "access_token": self.dropbox_access_token,
-                "folder": self.dropbox_folder
-            },
-            "web": {
-                "output_dir": self.web_output_dir,
-                "title": self.web_title
             },
             "database": {
                 "url": self.supabase_url,

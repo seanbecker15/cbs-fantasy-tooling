@@ -519,7 +519,7 @@ Perfect for "X points behind" displays in overlays.
 
 **Unchanged** (backward compatible):
 - `app/main.py` - Original file-based mode still works
-- All existing publishers (gmail, sendgrid, file, dropbox, web)
+- All existing publishers (gmail, sendgrid, file)
 
 ## Example .env File
 
