@@ -1,13 +1,104 @@
 # Win Scenario Analyzer
 
-Analyzes which combinations of remaining game outcomes would result in you winning the week, and calculates your probability of winning (assuming all remaining games are 50/50 coin flips).
+Analyzes which combinations of remaining game outcomes would result in you winning the week, and calculates your probability of winning using actual game odds when available.
 
 ## Features
 
 1. **Win Combination Finder**: Identifies which specific game outcomes must occur for you to win the week
-2. **Win Probability Calculator**: Calculates simple probability assuming 50/50 game outcomes
+2. **Win Probability Calculator**: Calculates both weighted probability (using actual game odds) and naive probability (50/50 assumption)
 3. **Detailed Scenario Analysis**: Shows sample winning combinations with required game results
 4. **Meta-Analysis TL;DR**: Analyzes ALL winning scenarios to identify critical patterns and shared outcomes
+5. **All-Players Leaderboard**: Analyzes every player's win probability and shows ranked leaderboard for competitive intelligence
+
+## Understanding Win Probability: Naive vs Weighted
+
+The tool calculates win probability in two ways:
+
+### Naive Probability (Scenario Counting - 50/50 Assumption)
+
+**Method**: Count winning scenarios and divide by total scenarios
+
+**Assumption**: All games are 50/50 coin flips
+
+**Example**:
+```
+8 pending games = 256 total scenarios
+47 scenarios where you win
+Naive probability = 47/256 = 18.36%
+```
+
+**Problem**: This treats all scenarios equally!
+
+A scenario requiring:
+- 3 heavy favorites to win (90% × 90% × 90% = 72.9% likely)
+
+Counts the same as:
+- 3 heavy underdogs to win (10% × 10% × 10% = 0.1% likely)
+
+### Weighted Probability (Odds-Based - Reality)
+
+**Method**: Calculate actual probability of each winning scenario and sum them
+
+**Data**: Uses real game probabilities from betting odds (The Odds API)
+
+**Example**:
+```
+Scenario #1: Ravens (88%) AND Seahawks (86%) win
+  Probability = 0.88 × 0.86 = 75.68%
+
+Scenario #2: Jets (12%) AND Titans (14%) win
+  Probability = 0.12 × 0.14 = 1.68%
+
+Weighted probability = Sum of all winning scenario probabilities
+```
+
+**Benefit**: Reflects reality - scenarios with favorites are weighted higher!
+
+### Real-World Example
+
+**Player A (Picks all favorites):**
+```
+Picks: Ravens (88%), Seahawks (86%), Lions (81%)
+Naive probability:  50 / 256 = 19.5%
+Weighted probability: 35.2%  ⬆️ Much higher!
+```
+Why? Their winning scenarios are **much more likely to actually occur**.
+
+**Player B (Picks all underdogs):**
+```
+Picks: Jets (12%), Titans (14%), Giants (19%)
+Naive probability:  50 / 256 = 19.5%
+Weighted probability: 2.1%  ⬇️ Much lower!
+```
+Why? Their winning scenarios **almost never happen in reality**.
+
+### Which Probability Should You Trust?
+
+**Use Weighted Probability when:**
+- Available (tool auto-loads from simulator predictions)
+- You want realistic assessment
+- You're comparing players with different risk profiles
+
+**Naive Probability is useful for:**
+- Understanding scenario count (how many paths to victory)
+- Quick mental math
+- When odds data unavailable
+
+### Tool Behavior
+
+The tool automatically:
+1. Looks for latest simulator predictions (`out/week_X_predictions_chalk_*.json`)
+2. If found: Shows **both** weighted and naive probabilities
+3. If not found: Shows only naive probability with warning
+
+**Recommended workflow:**
+```bash
+# 1. Run simulator first to generate odds
+python simulator/main.py
+
+# 2. Then run win analyzer (will auto-load odds)
+python app/win_scenario_analyzer.py --week 12 --player "Your Name"
+```
 
 ## How It Works
 
@@ -33,8 +124,11 @@ Analyzes which combinations of remaining game outcomes would result in you winni
    - Ties count as losses (you must have strictly higher points)
 
 5. **Calculate Probability**:
-   - Probability = (# winning scenarios) / (# total scenarios)
-   - Assumes each game is 50/50 (doesn't use odds/probabilities)
+   - **Weighted Probability**: Sums the actual probability of each winning scenario using real game odds
+     - Each scenario's probability = product of all game outcome probabilities in that scenario
+     - Example: If scenario requires Ravens (88%) AND Seahawks (86%) to win, probability = 0.88 × 0.86 = 75.68%
+   - **Naive Probability**: (# winning scenarios) / (# total scenarios) assuming 50/50 games
+   - Tool shows both metrics when odds data is available
 
 ### Example Calculation
 
@@ -132,11 +226,13 @@ Season: 2025
 Pending Games: 8
 Total Players: 32
 
+NOTE: Using weighted probability (actual game odds)
+
 Rank  Player                   Current   Win Scenarios       Probability
 ----------------------------------------------------------------------
 1     Alice Johnson            72        89 / 256            34.77%
-2     Bob Smith                68        47 / 256            18.36%
-3     Your Name                68        47 / 256            18.36%
+2     Bob Smith                68        47 / 256            24.31%
+3     Your Name                68        47 / 256            24.31%
 4     Carol Davis              70        42 / 256            16.41%
 5     Dave Wilson              66        38 / 256            14.84%
 6     Eve Martinez             65        31 / 256            12.11%
@@ -168,7 +264,10 @@ Remaining Games (8):
 Total Possible Scenarios: 256
 Winning Scenarios: 47
 
-Win Probability (50/50): 18.36%
+Win Probability (Weighted by Odds): 24.31%
+Win Probability (Naive 50/50):      18.36%
+
+NOTE: Using actual game probabilities from odds data
 ============================================================
 ```
 
@@ -193,7 +292,10 @@ Pending Picks: 8
 Total Possible Scenarios: 256
 Winning Scenarios: 47
 
-Win Probability (50/50): 18.36%
+Win Probability (Weighted by Odds): 24.31%
+Win Probability (Naive 50/50):      18.36%
+
+NOTE: Using actual game probabilities from odds data
 ============================================================
 
 SAMPLE WINNING COMBINATIONS:
@@ -512,6 +614,143 @@ The current tool analyzes **after picks are made**. To optimize **before picking
 
 This would be a new tool: `app/pick_optimizer.py` that finds the optimal picks given the field composition.
 
+## All-Players Leaderboard Analysis
+
+### Strategic Value
+
+The all-players leaderboard (`--all-players`) shows everyone's win probability, which provides:
+
+1. **Situational Awareness**: Know where you stand in real-time
+2. **Target Identification**: See who your real competition is
+3. **Strategy Adjustment**: Adjust picks based on who you need to beat
+
+### Interpreting the Leaderboard
+
+**High Current Points + Low Win Probability**
+```
+Rank  Player        Current   Win Scenarios   Probability
+4     Carol Davis   70        42 / 256        16.41%
+```
+- Carol is ahead now but has weak pending picks
+- She needs others to lose their picks
+- **Implication**: You can catch her if your high-confidence picks win
+
+**Low Current Points + High Win Probability**
+```
+Rank  Player          Current   Win Scenarios   Probability
+1     Alice Johnson   72        89 / 256        34.77%
+```
+- Alice has strong pending picks that likely win
+- She's the favorite to win the week
+- **Implication**: You need her high-confidence picks to lose to beat her
+
+**Tied Current Points, Different Probabilities**
+```
+Rank  Player        Current   Win Scenarios   Probability
+2     Bob Smith     68        47 / 256        18.36%
+3     Your Name     68        47 / 256        18.36%
+```
+- Same current score, same pending situation
+- Likely picked similar teams with similar confidence
+- **Implication**: You need to differentiate to separate from Bob
+
+**Zero Win Probability**
+```
+Rank  Player        Current   Win Scenarios   Probability
+32    Zack Brown    52         0 / 256        0.00%
+```
+- Mathematically eliminated - even if all pending picks win, can't catch the leader
+- **Implication**: Zack is out of contention for this week
+
+### Using Leaderboard for Strategy
+
+**Example: You're Rank 3 with 18% probability**
+
+Run individual analysis to understand your path:
+```bash
+# First, see the leaderboard
+python app/win_scenario_analyzer.py --week 12 --all-players
+
+# Then analyze your specific scenarios
+python app/win_scenario_analyzer.py --week 12 --player "Your Name" --detailed
+```
+
+Check your TL;DR meta-analysis to see:
+- Which games are CRITICAL for you
+- Whether you can afford to lose any picks
+- How your path to victory differs from Alice (the leader)
+
+**Example: Leader Analysis**
+
+If you want to know what the leader needs:
+```bash
+python app/win_scenario_analyzer.py --week 12 --player "Alice Johnson" --detailed
+```
+
+Compare her CRITICAL games to yours:
+- **If same**: You both need the same outcomes (tied to her fate)
+- **If different**: Opportunity for differentiation in future weeks
+
+### Workflow: Pre-Game Scouting
+
+**Tuesday-Wednesday (Before games start):**
+
+1. Run all-players leaderboard to see where everyone stands
+2. Identify top 3-5 threats (highest win probability)
+3. Analyze each threat's individual scenarios
+4. Look for games where you have different picks from leaders
+
+**Example finding:**
+```
+You picked: Ravens (14 pts)
+Alice (leader) picked: Ravens (14 pts)
+Bob (2nd place) picked: Jets (1 pt)
+
+Conclusion: If Ravens win, both you and Alice benefit equally.
+If Jets win (upset), Bob gains massive ground on both of you.
+```
+
+### Workflow: Live Game Tracking
+
+**Sunday (During games):**
+
+1. Watch CRITICAL games first (from your TL;DR)
+2. As games finish, mentally update probabilities:
+   - If CRITICAL game goes your way: Probability increases
+   - If CRITICAL game goes against you: Probability drops to 0%
+
+3. Check leader's CRITICAL games:
+   - If their CRITICAL pick loses: Their probability drops
+   - Your relative position improves
+
+**Example live tracking:**
+```
+12:00 PM: Ravens (your CRITICAL pick) wins! ✓
+          Still alive
+
+1:00 PM:  Alice's CRITICAL pick (Seahawks) loses! ✗
+          Alice eliminated, you move up to 1st in probability
+
+4:00 PM:  Your remaining picks need to hold to win
+```
+
+### Batch Analysis for Strategy Sessions
+
+Analyze all players at once to prepare reports:
+```bash
+# Export to file for analysis
+python app/win_scenario_analyzer.py --week 12 --all-players > week12_leaderboard.txt
+
+# Review and strategize for next week
+```
+
+This helps you:
+- Identify patterns in who's consistently at the top
+- See if certain players always pick chalk (predictable)
+- Find players who are frequently eliminated early (weak pickers)
+
+The all-players view transforms the tool from individual analysis to **competitive intelligence**.
+
 ### Use USER_NAME from .env
 
 If `USER_NAME` is set in your `.env` file, you can omit the `--player` flag:
@@ -551,11 +790,21 @@ The `app/main.py` scraper and `app/game_status_fetcher.py` handle populating thi
 
 ### Win Probability
 
-The probability shown assumes **all remaining games are 50/50 coin flips**. This is a simplification:
+The tool shows **two probability metrics**:
 
-- **Actual probabilities vary**: A 90% favorite is not a coin flip
-- **Useful for quick assessment**: Gives you a rough idea of your chances
-- **For precise probabilities**: Use the confidence pool simulator with real odds
+1. **Weighted Probability (Primary - when available)**:
+   - Uses actual game odds from betting markets
+   - Accounts for favorites vs underdogs
+   - **Most accurate** - this is the probability you should trust
+   - Automatically loaded from simulator predictions
+
+2. **Naive Probability (Fallback)**:
+   - Assumes all remaining games are 50/50 coin flips
+   - Useful for understanding scenario count
+   - **Less accurate** - doesn't reflect reality
+   - Shown when odds data unavailable or for comparison
+
+**Recommendation**: Always trust the **Weighted Probability** when available. The naive probability can significantly underestimate or overestimate your chances depending on whether you picked favorites or underdogs.
 
 ### Strategic Insights
 
@@ -621,10 +870,16 @@ Win Probability: 9.38%
 
 ## Limitations
 
-1. **50/50 Assumption**: Doesn't account for actual game probabilities (favorites vs underdogs)
+1. **Weighted Probability Requires Simulator Data**:
+   - Tool auto-loads odds from `out/week_X_predictions_chalk_*.json`
+   - If no simulator predictions exist, falls back to naive 50/50 probability
+   - **Recommendation**: Always run simulator first for accurate probabilities
+
 2. **No Bonus Modeling**: Doesn't model weekly bonuses (Most Wins, Most Points) if your league uses them
+
 3. **Ties**: Treats ties as losses (you must strictly win to count as a winning scenario)
-4. **Large Scenarios**: With 14+ pending games, 2^14 = 16,384+ scenarios (may be slow)
+
+4. **Large Scenarios**: With 14+ pending games, 2^14 = 16,384+ scenarios (may be slow but still feasible)
 
 ## Advanced Usage
 
@@ -667,6 +922,10 @@ The scraper (`app/main.py`) automatically updates `is_correct` in the database a
 - The tool will show if you won or lost
 
 ### Probability seems wrong
-- Remember: assumes 50/50 for all games
-- For more accurate probabilities, use the simulator with real odds
+- Check if tool is using weighted or naive probability (shown in output)
+- If only seeing naive probability:
+  - Run simulator first: `python simulator/main.py`
+  - Ensure `out/week_X_predictions_chalk_*.json` exists
+- Remember: naive probability assumes 50/50 and can be misleading
+- Weighted probability reflects reality much better
 - Check that `is_correct` is being updated properly in the database
