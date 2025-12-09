@@ -168,11 +168,58 @@ class WinScenarioAnalyzer:
 
         return list(pending_games)
 
+    def get_game_probabilities(self, week: int) -> Dict[Tuple[str, str], float]:
+        """
+        Get win probabilities for pending games from latest predictions.
+
+        Args:
+            week: Week number
+
+        Returns:
+            Dict mapping (team, opponent) -> probability that team wins
+        """
+        # Try to load from latest prediction files
+        import glob
+        import json
+
+        output_dir = os.getenv('OUTPUT_DIR', 'out')
+        pattern = f"{output_dir}/week_{week}_predictions_chalk_*.json"
+        files = glob.glob(pattern)
+
+        if not files:
+            # No prediction files, return empty dict (will use 50/50)
+            return {}
+
+        # Use most recent file
+        latest_file = max(files, key=os.path.getmtime)
+
+        try:
+            with open(latest_file, 'r') as f:
+                predictions = json.load(f)
+
+            probabilities = {}
+            for game in predictions.get('games', []):
+                favorite = game.get('favorite')
+                dog = game.get('dog')
+                fav_prob = game.get('favorite_prob', 0.5)
+
+                if favorite and dog:
+                    # Store probability for both perspectives
+                    probabilities[(favorite, dog)] = fav_prob
+                    probabilities[(dog, favorite)] = 1.0 - fav_prob
+
+            return probabilities
+
+        except Exception as e:
+            print(f"Warning: Could not load game probabilities: {e}")
+            return {}
+
     def analyze_win_scenarios(
         self,
         week: int,
         target_player: str,
-        detailed: bool = False
+        detailed: bool = False,
+        use_actual_probabilities: bool = True
     ) -> Dict:
         """
         Analyze all possible win scenarios for a player.
@@ -181,6 +228,7 @@ class WinScenarioAnalyzer:
             week: Week number
             target_player: Player name to analyze
             detailed: Whether to show detailed winning combinations
+            use_actual_probabilities: Use real game odds vs 50/50 assumption
 
         Returns:
             Dictionary with analysis results
@@ -229,19 +277,41 @@ class WinScenarioAnalyzer:
                 'current_winner': current_winner[0]
             }
 
+        # Load game probabilities if available
+        game_probabilities = {}
+        if use_actual_probabilities:
+            game_probabilities = self.get_game_probabilities(week)
+
         # Generate all possible outcomes (each game has 2 outcomes)
         num_scenarios = 2 ** len(pending_games)
         winning_scenarios = []
+        weighted_win_probability = 0.0
 
         for outcome_idx in range(num_scenarios):
             # Create outcome map for this scenario
             outcome_map: Dict[str, bool] = {}
+
+            # Calculate probability of this specific scenario occurring
+            scenario_probability = 1.0
 
             for game_idx, (team1, team2) in enumerate(pending_games):
                 # Use bit at position game_idx to determine winner
                 team1_wins = bool(outcome_idx & (1 << game_idx))
                 outcome_map[team1] = team1_wins
                 outcome_map[team2] = not team1_wins
+
+                # Calculate probability of this outcome
+                if use_actual_probabilities and game_probabilities:
+                    if team1_wins:
+                        # team1 wins - look up its probability
+                        prob = game_probabilities.get((team1, team2), 0.5)
+                    else:
+                        # team2 wins - look up its probability
+                        prob = game_probabilities.get((team2, team1), 0.5)
+                    scenario_probability *= prob
+                else:
+                    # 50/50 assumption
+                    scenario_probability *= 0.5
 
             # Calculate target player's total
             target_total = target_score.calculate_total(outcome_map)
@@ -259,10 +329,13 @@ class WinScenarioAnalyzer:
                 winning_scenarios.append({
                     'outcome_map': outcome_map.copy(),
                     'target_total': target_total,
-                    'max_opponent_total': max_other_total
+                    'max_opponent_total': max_other_total,
+                    'probability': scenario_probability
                 })
+                weighted_win_probability += scenario_probability
 
-        win_probability = len(winning_scenarios) / num_scenarios if num_scenarios > 0 else 0.0
+        # Naive probability (count-based, assumes 50/50)
+        naive_win_probability = len(winning_scenarios) / num_scenarios if num_scenarios > 0 else 0.0
 
         # Format pending games with pick information
         pending_games_formatted = []
@@ -289,6 +362,9 @@ class WinScenarioAnalyzer:
 
             pending_games_formatted.append(game_str)
 
+        # Determine which probability to use as primary
+        primary_probability = weighted_win_probability if (use_actual_probabilities and game_probabilities) else naive_win_probability
+
         result = {
             'week': week,
             'season': self.season,
@@ -299,8 +375,13 @@ class WinScenarioAnalyzer:
             'pending_games_formatted': pending_games_formatted,
             'total_scenarios': num_scenarios,
             'winning_scenarios': len(winning_scenarios),
-            'win_probability': win_probability,
-            'win_percentage': f"{win_probability * 100:.2f}%"
+            'win_probability': primary_probability,
+            'win_percentage': f"{primary_probability * 100:.2f}%",
+            'naive_win_probability': naive_win_probability,
+            'naive_win_percentage': f"{naive_win_probability * 100:.2f}%",
+            'weighted_win_probability': weighted_win_probability,
+            'weighted_win_percentage': f"{weighted_win_probability * 100:.2f}%",
+            'using_actual_odds': use_actual_probabilities and bool(game_probabilities)
         }
 
         if detailed and winning_scenarios:
@@ -633,7 +714,18 @@ def main():
     print(f"Total Possible Scenarios: {result['total_scenarios']:,}")
     print(f"Winning Scenarios: {result['winning_scenarios']:,}")
     print()
-    print(f"Win Probability (50/50): {result['win_percentage']}")
+
+    # Display probability metrics
+    if result.get('using_actual_odds'):
+        print(f"Win Probability (Weighted by Odds): {result['weighted_win_percentage']}")
+        print(f"Win Probability (Naive 50/50):      {result['naive_win_percentage']}")
+        print()
+        print("NOTE: Using actual game probabilities from odds data")
+    else:
+        print(f"Win Probability (50/50 Assumption): {result['win_percentage']}")
+        print()
+        print("NOTE: Assuming all games are 50/50 coin flips")
+
     print("=" * 60)
 
     if args.detailed and 'winning_combinations' in result:

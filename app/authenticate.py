@@ -45,7 +45,7 @@ def authenticate_gmail():
                 print("Re-authenticating...")
                 creds = None
         
-        if not creds:
+        if not creds or creds.expired or not creds.valid:
             print("Starting OAuth authentication flow...")
             print("A browser window will open for you to sign in to Google")
             try:
