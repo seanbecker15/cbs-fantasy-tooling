@@ -20,6 +20,7 @@ token.json
 # Virtual environments
 venv/
 .venv/
+.test_venv/
 
 # Python egg files
 *.egg-info/

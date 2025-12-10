@@ -1,3 +1,15 @@
+# This file contains pinned versions of all dependencies for reproducible builds.
+# 
+# For regular installation, use: pip install -e .
+# All runtime dependencies are specified in pyproject.toml
+#
+# This file is maintained for:
+# - Backwards compatibility with existing workflows
+# - Exact version pinning for reproducible environments
+# - CI/CD pipelines that require frozen dependencies
+#
+# To regenerate: pip freeze > requirements.txt (after pip install -e .)
+
 annotated-types==0.7.0
 anyio==4.4.0
 attrs==24.2.0

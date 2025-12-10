@@ -19,8 +19,8 @@ dependencies = [
     "numpy",
     "pandas",
     "matplotlib",
-    "typer",
-    "dropbox",
+    "inquirerpy",  # Interactive CLI menus
+    "supabase",    # Database storage provider
 ]
 
 [project.optional-dependencies]
