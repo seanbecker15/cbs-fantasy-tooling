@@ -9,11 +9,21 @@ class PickemResults:
     results: List[PickemResult]
     week_number: int = None
     timestamp: datetime = datetime.now()
+    max_wins_players: List[str] = None
+    max_wins_value: int = None
+    max_points_players: List[str] = None
+    max_points_value: int = None
 
     def __init__(self, results: List[PickemResult], week: int = None):
         self.results = results
         self.week_number = week
         self.timestamp = datetime.now()
+        max_wins_data = self.get_max_wins_data()
+        self.max_wins_value = max_wins_data["max_wins"]
+        self.max_wins_players = max_wins_data["players"]
+        max_points_data = self.get_max_points_data()
+        self.max_points_value = max_points_data["max_points"]
+        self.max_points_players = max_points_data["players"]
     
     def to_csv(self) -> str:
         csv_data = "Name,Points,Wins,Losses\n"
@@ -60,6 +70,10 @@ class PickemResults:
         
         results_data = PickemResults(results, data.get('week_number'))
         results_data.timestamp = datetime.fromisoformat(data['timestamp'])
+        results_data.max_wins_value = data.get('max_wins', {}).get('max_wins')
+        results_data.max_wins_players = data.get('max_wins', {}).get('players')
+        results_data.max_points_value = data.get('max_points', {}).get('max_points')
+        results_data.max_points_players = data.get('max_points', {}).get('players')
         return results_data
     
     def to_dict(self) -> Dict[str, Any]:

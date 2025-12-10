@@ -5,9 +5,13 @@ from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
 
 from cbs_fantasy_tooling.config import config
+from cbs_fantasy_tooling.analysis import (
+    run_strategy_simulation,
+    analyze_competitors,
+    analyze_contrarian_picks,
+)
 from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pickem_results
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
-from cbs_fantasy_tooling.models import PickemResults
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.database import DatabasePublisher
 from cbs_fantasy_tooling.publishers.file import FilePublisher
@@ -61,8 +65,9 @@ class IngestMode(str, Enum):
 
 
 class AnalysisType(str, Enum):
-    MATCHUP_REVIEW = "matchup_review"
-    TREND_REPORT = "trend_report"
+    CONFIDENCE_POOL_STRATEGY = "confidence_pool_strategy"
+    COMPETITOR_INTELLIGENCE = "competitor_intelligence"
+    VISUALIZE_CONTRARIAN_PICKS = "visualize_contrarian_picks"
 
 
 def prompt_menu_choice() -> MenuOption:
@@ -150,22 +155,77 @@ def analysis_flow():
     analysis_types = inquirer.checkbox(
         message="Select analysis type(s)",
         choices=[
-            Choice(value=AnalysisType.MATCHUP_REVIEW, name="Matchup Review"),
-            Choice(value=AnalysisType.TREND_REPORT, name="Trend Report"),
+            Choice(value=AnalysisType.CONFIDENCE_POOL_STRATEGY, name="Confidence Pool Strategy Simulator"),
+            Choice(value=AnalysisType.COMPETITOR_INTELLIGENCE, name="Competitor Intelligence Analysis"),
+            Choice(value=AnalysisType.VISUALIZE_CONTRARIAN_PICKS, name="Visualize Contrarian Picks"),
         ],
-        default=[AnalysisType.MATCHUP_REVIEW],
-    ).execute()
-    analysis_config = inquirer.text(
-        message="Enter any analysis config options (key1=val1,key2=val2 or leave blank)",
-        default="",
+        default=[AnalysisType.CONFIDENCE_POOL_STRATEGY],
     ).execute()
 
-    print(
-        f"Configured analysis with analysis_types={analysis_types or '[]'}, "
-        f"config='{analysis_config or 'default'}'."
-    )
-    print("TODO: call analyze_data(analysis_types, analysis_config)")
-    print("Returning to main menu...\n")
+    if not analysis_types:
+        print("No analysis types selected. Returning to main menu...\n")
+        return
+
+    # Handle Confidence Pool Strategy Simulation
+    if AnalysisType.CONFIDENCE_POOL_STRATEGY in analysis_types:
+        user_picks_input = inquirer.text(
+            message="Enter your picks (comma-separated team names, or leave blank)",
+            default="",
+        ).execute()
+
+        user_picks = user_picks_input if user_picks_input.strip() else None
+
+        analyze_only = False
+        if user_picks:
+            analyze_only = inquirer.confirm(
+                message="Analyze only your picks (skip built-in strategies)?",
+                default=False,
+            ).execute()
+
+        print("\n" + "="*60)
+        print("RUNNING CONFIDENCE POOL STRATEGY SIMULATION")
+        print("="*60)
+
+        results = run_strategy_simulation(user_picks=user_picks, analyze_only=analyze_only)
+
+        if not analyze_only:
+            print("\n" + "="*60)
+            print("STRATEGY COMPARISON")
+            print("="*60)
+            print(results["comparison_df"].round(4).to_string(index=False))
+
+            print(f"\nResults saved to output directory")
+
+    # Handle Competitor Intelligence Analysis
+    if AnalysisType.COMPETITOR_INTELLIGENCE in analysis_types:
+        target_week_input = inquirer.text(
+            message="Analyze contrarian opportunities for week (or leave blank for overview only)",
+            default="",
+        ).execute()
+
+        target_week = int(target_week_input) if target_week_input.strip() else None
+
+        print("\n" + "="*60)
+        print("RUNNING COMPETITOR INTELLIGENCE ANALYSIS")
+        print("="*60)
+
+        results = analyze_competitors(data_dir=config.output_dir, week=target_week)
+
+    if AnalysisType.VISUALIZE_CONTRARIAN_PICKS in analysis_types:
+        target_week_input = inquirer.text(
+            message="Visualize contrarian picks for week number",
+            default=str(get_weeks_since_start(config.week_one_start_date)),
+        ).execute()
+
+        target_week = int(target_week_input)
+
+        print("\n" + "="*60)
+        print("VISUALIZING CONTRARIAN PICKS")
+        print("="*60)
+
+        analyze_contrarian_picks(week=target_week)
+
+    print("\nReturning to main menu...\n")
 
 
 def main():
