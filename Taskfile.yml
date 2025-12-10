@@ -26,7 +26,7 @@ tasks:
     desc: Run all tests using pytest
     dir: .
     cmds:
-      - ./scripts/test.sh
+      - pytest
     deps:
       - check-venv
 
@@ -34,7 +34,7 @@ tasks:
     desc: Run linter (ruff) with auto-fix
     dir: .
     cmds:
-      - ./scripts/lint.sh
+      - ruff check --fix .
     deps:
       - check-venv
 
@@ -42,7 +42,7 @@ tasks:
     desc: Run code formatter (black)
     dir: .
     cmds:
-      - ./scripts/format.sh
+      - black .
     deps:
       - check-venv
 

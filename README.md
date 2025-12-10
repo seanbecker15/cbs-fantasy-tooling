@@ -57,27 +57,15 @@ Logs land in `/tmp/cbs-sports-scraper/`.
 
 #### Using Task (Recommended)
 
-Install [Task](https://taskfile.dev/installation/) and run `task --list` to see all available commands.
+Install Task via [`mise`](https://github.com/jdx/mise) (recommended):
 
 ```bash
-# macOS: brew install go-task
-# Linux: sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+mise use -g aqua:go-task/task@latest
+mise install
 
-task --list    # Show all available tasks
+task --list    # Show available tasks
 task check     # Run all checks before submitting a PR
 ```
-
-#### Using Scripts Directly
-
-Helper scripts are also provided:
-
-```bash
-./scripts/test.sh      # Run tests
-./scripts/lint.sh      # Run linter with auto-fix
-./scripts/format.sh    # Format code
-```
-
-**Before submitting a PR**: `task check` or `./scripts/format.sh && ./scripts/lint.sh && ./scripts/test.sh`
 
 #### Continuous Integration
 The repository uses GitHub Actions to automatically run tests, linting, and formatting checks on:
