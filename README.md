@@ -11,6 +11,12 @@ Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs M
   ```
   
   **Note**: All required dependencies are specified in `pyproject.toml` and will be installed automatically. The `requirements.txt` file is kept for backwards compatibility and pinned versions but is not required for installation.
+  
+- For development, install dev dependencies:
+  ```bash
+  pip install -e '.[dev]'
+  ```
+  This installs `pytest`, `black`, and `ruff` for testing, formatting, and linting.
 - Create `.env` in the repo root:
   ```bash
   EMAIL=you@example.com           # CBS login (required for scraping)
@@ -46,6 +52,45 @@ Helper scripts wrap `launchctl`:
 ./scripts/unschedule-task.sh   # remove scheduled task
 ```
 Logs land in `/tmp/cbs-sports-scraper/`.
+
+### Development
+
+#### Testing, Linting, and Formatting
+Helper scripts are provided to standardize the development workflow:
+
+```bash
+# Run all tests
+./scripts/test.sh
+
+# Run linter (ruff) with auto-fix
+./scripts/lint.sh
+
+# Run code formatter (black)
+./scripts/format.sh
+```
+
+**Before submitting a PR**, run these scripts locally to ensure your code passes CI checks:
+```bash
+./scripts/format.sh && ./scripts/lint.sh && ./scripts/test.sh
+```
+
+All scripts:
+- Check for virtual environment activation and fail gracefully if not active
+- Provide colored output and summary messages
+- Propagate exit codes for CI integration
+
+#### Continuous Integration
+The repository uses GitHub Actions to automatically run tests, linting, and formatting checks on:
+- All pushes to `main`/`master` branches
+- All pull requests targeting `main`/`master`
+
+The CI workflow:
+- Tests against Python 3.9, 3.10, 3.11, and 3.12
+- Runs on Ubuntu Linux
+- Caches dependencies for faster builds
+- **Fails PRs** if any check fails
+
+To avoid CI failures, always run the development scripts locally before pushing.
 
 ### Troubleshooting
 - Chrome/Selenium issues: ensure Chrome + matching chromedriver are installed.  
