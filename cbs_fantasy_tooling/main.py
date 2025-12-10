@@ -42,6 +42,7 @@ class AnalysisType(str, Enum):
 
 # Global list to track background ingestion threads
 _background_threads: List[threading.Thread] = []
+_threads_lock = threading.Lock()
 
 
 def start_background_ingestion(target_func, *args, **kwargs):
@@ -57,7 +58,8 @@ def start_background_ingestion(target_func, *args, **kwargs):
     """
     thread = threading.Thread(target=target_func, args=args, kwargs=kwargs, daemon=True)
     thread.start()
-    _background_threads.append(thread)
+    with _threads_lock:
+        _background_threads.append(thread)
     return thread
 
 
@@ -237,7 +239,8 @@ def main():
 
     while True:
         # Show status of background threads if any are active
-        active_threads = [t for t in _background_threads if t.is_alive()]
+        with _threads_lock:
+            active_threads = [t for t in _background_threads if t.is_alive()]
         if active_threads:
             print(f"\n📡 {len(active_threads)} background ingestion thread(s) running")
 
@@ -248,6 +251,8 @@ def main():
         elif choice == MenuOption.ANALYZE:
             analysis_flow()
         elif choice == MenuOption.EXIT:
+            with _threads_lock:
+                active_threads = [t for t in _background_threads if t.is_alive()]
             if active_threads:
                 print(
                     f"\nNote: {len(active_threads)} background ingestion thread(s) will stop when the program exits."
