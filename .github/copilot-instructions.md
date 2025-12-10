@@ -21,8 +21,9 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 2. **Install the package in editable mode** (required for CLI to work):
 ```bash
 pip install -e .
+pip install -r requirements.txt  # Required: pyproject.toml is incomplete
 ```
-This takes ~60 seconds. It installs all dependencies from `pyproject.toml` and makes the `cbs-scrape` command available.
+This takes ~60 seconds. **Important**: `requirements.txt` has additional dependencies (InquirerPy, supabase) not in `pyproject.toml`.
 
 3. **Install development dependencies** (required for linting):
 ```bash
@@ -59,10 +60,12 @@ ruff check --fix .       # Fix linting issues
 ### Running the Application
 
 ```bash
-cbs-scrape  # Interactive CLI with InquirerPy menus
+python -m cbs_fantasy_tooling.main  # Interactive CLI with InquirerPy menus
 ```
 
-**Validation**: Run `cbs-scrape` after changes → test in "Once" mode → verify outputs in `./out/` (CSV/JSON files)
+**Note**: The `cbs-scrape` command defined in `pyproject.toml` is broken (tries to import non-existent `app`). Use `python -m` instead.
+
+**Validation**: Run CLI after changes → test in "Once" mode → verify outputs in `./out/` (CSV/JSON files)
 
 ## Project Structure and Architecture
 
@@ -132,7 +135,7 @@ cbs-fantasy-tooling/
 
 ## Common Workflows
 
-**Development**: Edit → `black . && ruff check --fix .` → `cbs-scrape` test → verify `./out/` → commit
+**Development**: Edit → `black . && ruff check --fix .` → `python -m cbs_fantasy_tooling.main` test → verify `./out/` → commit
 
 **Scraping changes**: Edit `ingest/cbs_sports/scrape.py` → test in "Once" mode first (CBS HTML changes frequently, selectors are brittle)
 
@@ -151,6 +154,8 @@ cbs-fantasy-tooling/
 - Real-time mode stubbed (TODOs in `main.py` lines 102, 116)
 - No CI/CD or pre-commit hooks
 - Chrome required for scraping
+- `cbs-scrape` command broken (use `python -m cbs_fantasy_tooling.main` instead)
+- `pyproject.toml` dependencies incomplete (must also install `requirements.txt`)
 
 ## Key Files
 
@@ -169,16 +174,20 @@ Follow directly; only search if incomplete or errors occur. Common issues: forgo
 # Setup (one-time)
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
+pip install -r requirements.txt  # Important: pyproject.toml is incomplete
 pip install pytest black ruff
 cp .env.example .env  # Then edit with your credentials
 
 # Daily workflow
-source .venv/bin/activate  # Start session
-cbs-scrape                 # Run interactive CLI
-black . && ruff check .    # Lint before commit
+source .venv/bin/activate           # Start session
+python -m cbs_fantasy_tooling.main  # Run interactive CLI
+black . && ruff check .             # Lint before commit
 
 # Verify outputs
-ls -l out/                 # Check for expected CSVs/JSONs
+ls -l out/                          # Check for expected CSVs/JSONs
 ```
 
-**Most common mistake**: Forgetting to activate virtual environment before running commands. Always run `source .venv/bin/activate` first.
+**Most common mistakes**: 
+- Forgetting venv activation (`source .venv/bin/activate`)
+- Running `pip install -e .` without also installing `requirements.txt`
+- Using `cbs-scrape` command (broken) instead of `python -m cbs_fantasy_tooling.main`
