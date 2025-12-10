@@ -1,33 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.cbs-sports.scraper</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/sean/Code/cbs-fantasy-tooling/.venv/bin/python</string>
+      <string>-m</string>
+      <string>cbs_fantasy_tooling.scrape</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/sean/Code/cbs-fantasy-tooling</string>
+
+    <key>StartCalendarInterval</key>
     <dict>
-        <key>Label</key>
-        <string>com.cbs-sports.scraper</string>
-        <key>ProgramArguments</key>
-        <array>
-            <string>/bin/bash</string>
-            <string>-c</string>
-            <string>source /Users/sean/Code/cbs-fantasy-tooling/venv/bin/activate && /Users/sean/Code/cbs-fantasy-tooling/venv/bin/python /Users/sean/Code/cbs-fantasy-tooling/app/main.py</string>
-        </array>
-        <key>StartCalendarInterval</key>
-        <dict>
-            <!--
-            !important!
-            Run at 9:30am on Tuesdays because the week transitions
-            Tuesday at 9am. This tool depends on the text "Week X" on the website,
-            where X is the current week and X-1 is the week that just concluded.
-            -->
-            <key>Hour</key>
-            <integer>9</integer>
-            <key>Minute</key>
-            <integer>30</integer>
-            <key>Weekday</key>
-            <integer>2</integer>
-        </dict>
-        <key>StandardErrorPath</key>
-        <string>/tmp/cbs-sports-scraper/stderr.log</string>
-        <key>StandardOutPath</key>
-        <string>/tmp/cbs-sports-scraper/stdout.log</string>
+      <!--
+      Run at 9:30am on Tuesdays because the week transitions
+      Tuesday at 9am. This tool depends on the text "Week X" on the website,
+      where X is the current week and X-1 is the week that just concluded.
+      -->
+      <key>Hour</key>
+      <integer>9</integer>
+      <key>Minute</key>
+      <integer>30</integer>
+      <key>Weekday</key>
+      <integer>2</integer>
     </dict>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/cbs-sports-scraper/stderr.log</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/cbs-sports-scraper/stdout.log</string>
+  </dict>
 </plist>

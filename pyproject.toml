@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cbs-fantasy-tooling"
+version = "0.1.0"
+description = "CBS Sports fantasy football data scraping and analysis toolkit"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "selenium",
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-api-python-client",
+    "sendgrid",
+    "python-dotenv",
+    "requests",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "typer",
+    "dropbox",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+]
+
+[project.scripts]
+cbs-scrape = "cbs_fantasy_tooling.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cbs_fantasy_tooling*"]
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100

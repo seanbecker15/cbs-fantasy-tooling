@@ -12,8 +12,7 @@ This is a Python-based web scraping tool that automatically extracts fantasy spo
 - **`storage.py`** - Data models and CSV handling for scraped results
 - **`publishers/`** - Publisher system for sending results via different methods:
   - **`email.py`** - Gmail API and SendGrid email publishers
-  - **`file.py`** - File and Dropbox publishers for local/cloud storage
-  - **`web.py`** - Web publishing capabilities
+  - **`file.py`** - File publisher for local storage
 
 ### Supporting Files
 - **`requirements.txt`** - Python dependencies
@@ -33,9 +32,7 @@ This is a Python-based web scraping tool that automatically extracts fantasy spo
 
 ### 2. Publisher System (`publishers/`)
 - **Gmail API Integration** - Primary email publisher using OAuth 2.0 authentication
-- **SendGrid Integration** - Legacy email publisher for backward compatibility
-- **File Publishing** - Local CSV file output and Dropbox cloud storage
-- **Web Publishing** - Web-based result sharing capabilities
+- **File Publishing** - Local CSV file output
 - Modular design allows enabling/disabling specific publishers
 - HTML-formatted email reports with CSV attachments
 - Highlights weekly winners (most wins and most points)
@@ -89,8 +86,6 @@ Publisher configuration (via `ENABLED_PUBLISHERS` setting):
 - **Gmail Publisher**: Requires `credentials.json` file for OAuth 2.0
 - **SendGrid Publisher**: Requires `SENDGRID_API_KEY` for legacy support
 - **File Publisher**: Local output directory configuration
-- **Web Publisher**: Web hosting credentials and endpoints
-- **Dropbox Publisher**: Dropbox API tokens for cloud storage
 
 Simulator configuration:
 - `THE_ODDS_API_KEY` - Required API key from The Odds API for real-time NFL moneylines
@@ -103,7 +98,6 @@ Key Python packages from `requirements.txt`:
 - `google-auth`, `google-auth-oauthlib`, `google-api-python-client` - Gmail API integration
 - `sendgrid` - Legacy SendGrid email support
 - `python-dotenv` - Environment variable management
-- `dropbox` - Cloud storage integration (optional)
 - `requests` - HTTP client library
 - `numpy` - Numerical computing for simulations
 - `pandas` - Data analysis and CSV handling
@@ -367,7 +361,6 @@ Each week file contains structured game data:
       "winner": "SF",
       "loser": "LAR",
       "completed": true,
-      "game_date": "2025-10-03T00:15Z"
     }
   ]
 }
