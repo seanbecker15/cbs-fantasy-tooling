@@ -23,6 +23,7 @@ from supabase import create_client, Client
 @dataclass
 class Pick:
     """Represents a single player's pick for a game."""
+
     player_name: str
     team: str
     confidence_points: int
@@ -33,6 +34,7 @@ class Pick:
 @dataclass
 class PlayerScore:
     """Current and potential score for a player."""
+
     player_name: str
     current_points: int
     pending_picks: List[Pick]
@@ -82,24 +84,26 @@ class WinScenarioAnalyzer:
         Returns:
             List of Pick objects
         """
-        query = self.client.table(self.picks_table)\
-            .select('*')\
-            .eq('season', self.season)\
-            .eq('week_number', week)
+        query = (
+            self.client.table(self.picks_table)
+            .select("*")
+            .eq("season", self.season)
+            .eq("week_number", week)
+        )
 
         if player_name:
-            query = query.eq('player_name', player_name)
+            query = query.eq("player_name", player_name)
 
         response = query.execute()
 
         picks = []
         for row in response.data:
             pick = Pick(
-                player_name=row['player_name'],
-                team=row['team'],
-                confidence_points=row['confidence_points'],
-                is_correct=row.get('is_correct'),
-                opponent_team=row.get('opponent_team')
+                player_name=row["player_name"],
+                team=row["team"],
+                confidence_points=row["confidence_points"],
+                is_correct=row.get("is_correct"),
+                opponent_team=row.get("opponent_team"),
             )
             picks.append(pick)
 
@@ -139,9 +143,7 @@ class WinScenarioAnalyzer:
                 # is_correct = False contributes 0 points
 
             player_scores[player_name] = PlayerScore(
-                player_name=player_name,
-                current_points=current_points,
-                pending_picks=pending_picks
+                player_name=player_name, current_points=current_points, pending_picks=pending_picks
             )
 
         return player_scores
@@ -182,7 +184,7 @@ class WinScenarioAnalyzer:
         import glob
         import json
 
-        output_dir = os.getenv('OUTPUT_DIR', 'out')
+        output_dir = os.getenv("OUTPUT_DIR", "out")
         pattern = f"{output_dir}/week_{week}_predictions_chalk_*.json"
         files = glob.glob(pattern)
 
@@ -194,14 +196,14 @@ class WinScenarioAnalyzer:
         latest_file = max(files, key=os.path.getmtime)
 
         try:
-            with open(latest_file, 'r') as f:
+            with open(latest_file, "r") as f:
                 predictions = json.load(f)
 
             probabilities = {}
-            for game in predictions.get('games', []):
-                favorite = game.get('favorite')
-                dog = game.get('dog')
-                fav_prob = game.get('favorite_prob', 0.5)
+            for game in predictions.get("games", []):
+                favorite = game.get("favorite")
+                dog = game.get("dog")
+                fav_prob = game.get("favorite_prob", 0.5)
 
                 if favorite and dog:
                     # Store probability for both perspectives
@@ -219,7 +221,7 @@ class WinScenarioAnalyzer:
         week: int,
         target_player: str,
         detailed: bool = False,
-        use_actual_probabilities: bool = True
+        use_actual_probabilities: bool = True,
     ) -> Dict:
         """
         Analyze all possible win scenarios for a player.
@@ -237,13 +239,12 @@ class WinScenarioAnalyzer:
         player_scores = self.get_player_scores(week)
 
         if target_player not in player_scores:
-            return {
-                'error': f"Player '{target_player}' not found in week {week} data"
-            }
+            return {"error": f"Player '{target_player}' not found in week {week} data"}
 
         target_score = player_scores[target_player]
-        other_scores = {name: score for name, score in player_scores.items()
-                       if name != target_player}
+        other_scores = {
+            name: score for name, score in player_scores.items() if name != target_player
+        }
 
         # Get pending games
         pending_games = self.get_pending_games(week)
@@ -256,8 +257,7 @@ class WinScenarioAnalyzer:
 
         # Filter target's pending picks to only those in pending games
         relevant_pending_picks = [
-            pick for pick in target_score.pending_picks
-            if pick.team in pending_teams
+            pick for pick in target_score.pending_picks if pick.team in pending_teams
         ]
 
         if not pending_games:
@@ -266,15 +266,15 @@ class WinScenarioAnalyzer:
             is_winning = current_winner[0] == target_player
 
             return {
-                'week': week,
-                'player': target_player,
-                'current_points': target_score.current_points,
-                'pending_games': 0,
-                'total_scenarios': 1,
-                'winning_scenarios': 1 if is_winning else 0,
-                'win_probability': 1.0 if is_winning else 0.0,
-                'status': 'Week is complete',
-                'current_winner': current_winner[0]
+                "week": week,
+                "player": target_player,
+                "current_points": target_score.current_points,
+                "pending_games": 0,
+                "total_scenarios": 1,
+                "winning_scenarios": 1 if is_winning else 0,
+                "win_probability": 1.0 if is_winning else 0.0,
+                "status": "Week is complete",
+                "current_winner": current_winner[0],
             }
 
         # Load game probabilities if available
@@ -318,20 +318,21 @@ class WinScenarioAnalyzer:
 
             # Calculate all other players' totals
             other_totals = {
-                name: score.calculate_total(outcome_map)
-                for name, score in other_scores.items()
+                name: score.calculate_total(outcome_map) for name, score in other_scores.items()
             }
 
             # Check if target wins (ties count as losses)
             max_other_total = max(other_totals.values()) if other_totals else 0
 
             if target_total > max_other_total:
-                winning_scenarios.append({
-                    'outcome_map': outcome_map.copy(),
-                    'target_total': target_total,
-                    'max_opponent_total': max_other_total,
-                    'probability': scenario_probability
-                })
+                winning_scenarios.append(
+                    {
+                        "outcome_map": outcome_map.copy(),
+                        "target_total": target_total,
+                        "max_opponent_total": max_other_total,
+                        "probability": scenario_probability,
+                    }
+                )
                 weighted_win_probability += scenario_probability
 
         # Naive probability (count-based, assumes 50/50)
@@ -363,25 +364,29 @@ class WinScenarioAnalyzer:
             pending_games_formatted.append(game_str)
 
         # Determine which probability to use as primary
-        primary_probability = weighted_win_probability if (use_actual_probabilities and game_probabilities) else naive_win_probability
+        primary_probability = (
+            weighted_win_probability
+            if (use_actual_probabilities and game_probabilities)
+            else naive_win_probability
+        )
 
         result = {
-            'week': week,
-            'season': self.season,
-            'player': target_player,
-            'current_points': target_score.current_points,
-            'pending_games': len(pending_games),
-            'pending_picks': len(relevant_pending_picks),
-            'pending_games_formatted': pending_games_formatted,
-            'total_scenarios': num_scenarios,
-            'winning_scenarios': len(winning_scenarios),
-            'win_probability': primary_probability,
-            'win_percentage': f"{primary_probability * 100:.2f}%",
-            'naive_win_probability': naive_win_probability,
-            'naive_win_percentage': f"{naive_win_probability * 100:.2f}%",
-            'weighted_win_probability': weighted_win_probability,
-            'weighted_win_percentage': f"{weighted_win_probability * 100:.2f}%",
-            'using_actual_odds': use_actual_probabilities and bool(game_probabilities)
+            "week": week,
+            "season": self.season,
+            "player": target_player,
+            "current_points": target_score.current_points,
+            "pending_games": len(pending_games),
+            "pending_picks": len(relevant_pending_picks),
+            "pending_games_formatted": pending_games_formatted,
+            "total_scenarios": num_scenarios,
+            "winning_scenarios": len(winning_scenarios),
+            "win_probability": primary_probability,
+            "win_percentage": f"{primary_probability * 100:.2f}%",
+            "naive_win_probability": naive_win_probability,
+            "naive_win_percentage": f"{naive_win_probability * 100:.2f}%",
+            "weighted_win_probability": weighted_win_probability,
+            "weighted_win_percentage": f"{weighted_win_probability * 100:.2f}%",
+            "using_actual_odds": use_actual_probabilities and bool(game_probabilities),
         }
 
         if detailed and winning_scenarios:
@@ -403,17 +408,22 @@ class WinScenarioAnalyzer:
                     game_tuple = tuple(sorted([team, opponent]))
                     processed_games.add(game_tuple)
 
-                    pick_wins = scenario['outcome_map'].get(team, False)
+                    pick_wins = scenario["outcome_map"].get(team, False)
                     team1, team2 = sorted([team, opponent])
                     game_str = f"({team1} vs. {team2} - {team}) [{pick.confidence_points} pts]"
 
                     if game_str not in game_stats:
-                        game_stats[game_str] = {'must_win': 0, 'must_lose': 0, 'any': 0, 'confidence': pick.confidence_points}
+                        game_stats[game_str] = {
+                            "must_win": 0,
+                            "must_lose": 0,
+                            "any": 0,
+                            "confidence": pick.confidence_points,
+                        }
 
                     if pick_wins:
-                        game_stats[game_str]['must_win'] += 1
+                        game_stats[game_str]["must_win"] += 1
                     else:
-                        game_stats[game_str]['must_lose'] += 1
+                        game_stats[game_str]["must_lose"] += 1
 
                 # Track unpicked games
                 for team1, team2 in pending_games:
@@ -421,68 +431,85 @@ class WinScenarioAnalyzer:
                     if game_tuple not in processed_games:
                         game_str = f"({team1} vs. {team2} - any)"
                         if game_str not in game_stats:
-                            game_stats[game_str] = {'must_win': 0, 'must_lose': 0, 'any': 0, 'confidence': 0}
-                        game_stats[game_str]['any'] += 1
+                            game_stats[game_str] = {
+                                "must_win": 0,
+                                "must_lose": 0,
+                                "any": 0,
+                                "confidence": 0,
+                            }
+                        game_stats[game_str]["any"] += 1
 
             # Generate meta-analysis summary
             total_winning_scenarios = len(winning_scenarios)
             meta_analysis = {
-                'always_win': [],      # 100% of scenarios require win
-                'usually_win': [],     # 75-99% require win
-                'sometimes_win': [],   # 25-74% require win
-                'rarely_win': [],      # 1-24% require win
-                'always_lose': [],     # 100% require loss
-                'usually_lose': [],    # 75-99% require loss
-                'sometimes_lose': [],  # 25-74% require loss
-                'rarely_lose': [],     # 1-24% require loss
-                'always_any': []       # 100% are "any"
+                "always_win": [],  # 100% of scenarios require win
+                "usually_win": [],  # 75-99% require win
+                "sometimes_win": [],  # 25-74% require win
+                "rarely_win": [],  # 1-24% require win
+                "always_lose": [],  # 100% require loss
+                "usually_lose": [],  # 75-99% require loss
+                "sometimes_lose": [],  # 25-74% require loss
+                "rarely_lose": [],  # 1-24% require loss
+                "always_any": [],  # 100% are "any"
             }
 
             for game_str, stats in game_stats.items():
-                win_pct = (stats['must_win'] / total_winning_scenarios * 100) if total_winning_scenarios > 0 else 0
-                lose_pct = (stats['must_lose'] / total_winning_scenarios * 100) if total_winning_scenarios > 0 else 0
-                any_pct = (stats['any'] / total_winning_scenarios * 100) if total_winning_scenarios > 0 else 0
+                win_pct = (
+                    (stats["must_win"] / total_winning_scenarios * 100)
+                    if total_winning_scenarios > 0
+                    else 0
+                )
+                lose_pct = (
+                    (stats["must_lose"] / total_winning_scenarios * 100)
+                    if total_winning_scenarios > 0
+                    else 0
+                )
+                any_pct = (
+                    (stats["any"] / total_winning_scenarios * 100)
+                    if total_winning_scenarios > 0
+                    else 0
+                )
 
                 game_info = {
-                    'game': game_str,
-                    'win_pct': win_pct,
-                    'lose_pct': lose_pct,
-                    'any_pct': any_pct,
-                    'confidence': stats.get('confidence', 0)
+                    "game": game_str,
+                    "win_pct": win_pct,
+                    "lose_pct": lose_pct,
+                    "any_pct": any_pct,
+                    "confidence": stats.get("confidence", 0),
                 }
 
                 # Categorize based on win percentage
                 if win_pct == 100:
-                    meta_analysis['always_win'].append(game_info)
+                    meta_analysis["always_win"].append(game_info)
                 elif win_pct >= 75:
-                    meta_analysis['usually_win'].append(game_info)
+                    meta_analysis["usually_win"].append(game_info)
                 elif win_pct >= 25:
-                    meta_analysis['sometimes_win'].append(game_info)
+                    meta_analysis["sometimes_win"].append(game_info)
                 elif win_pct > 0:
-                    meta_analysis['rarely_win'].append(game_info)
+                    meta_analysis["rarely_win"].append(game_info)
 
                 # Categorize based on lose percentage
                 if lose_pct == 100:
-                    meta_analysis['always_lose'].append(game_info)
+                    meta_analysis["always_lose"].append(game_info)
                 elif lose_pct >= 75:
-                    meta_analysis['usually_lose'].append(game_info)
+                    meta_analysis["usually_lose"].append(game_info)
                 elif lose_pct >= 25:
-                    meta_analysis['sometimes_lose'].append(game_info)
+                    meta_analysis["sometimes_lose"].append(game_info)
                 elif lose_pct > 0:
-                    meta_analysis['rarely_lose'].append(game_info)
+                    meta_analysis["rarely_lose"].append(game_info)
 
                 # Categorize "any" games
                 if any_pct == 100:
-                    meta_analysis['always_any'].append(game_info)
+                    meta_analysis["always_any"].append(game_info)
 
             # Sort each category by confidence points (descending)
             for category in meta_analysis.values():
-                category.sort(key=lambda x: x['confidence'], reverse=True)
+                category.sort(key=lambda x: x["confidence"], reverse=True)
 
-            result['meta_analysis'] = meta_analysis
+            result["meta_analysis"] = meta_analysis
 
             # Generate detailed winning combinations (first 20 only)
-            result['winning_combinations'] = []
+            result["winning_combinations"] = []
             for scenario in winning_scenarios[:20]:  # Limit to first 20
                 # Build game outcomes categorized by result type
                 must_win = []
@@ -505,7 +532,7 @@ class WinScenarioAnalyzer:
                     processed_games.add(game_tuple)
 
                     # Check if this pick wins or loses in this scenario
-                    pick_wins = scenario['outcome_map'].get(team, False)
+                    pick_wins = scenario["outcome_map"].get(team, False)
 
                     # Format the game string
                     team1, team2 = sorted([team, opponent])
@@ -529,16 +556,18 @@ class WinScenarioAnalyzer:
                 any_outcome.sort()
 
                 combo = {
-                    'target_total': scenario['target_total'],
-                    'max_opponent_total': scenario['max_opponent_total'],
-                    'must_win': must_win,
-                    'can_lose': can_lose,
-                    'any_outcome': any_outcome
+                    "target_total": scenario["target_total"],
+                    "max_opponent_total": scenario["max_opponent_total"],
+                    "must_win": must_win,
+                    "can_lose": can_lose,
+                    "any_outcome": any_outcome,
                 }
-                result['winning_combinations'].append(combo)
+                result["winning_combinations"].append(combo)
 
             if len(winning_scenarios) > 20:
-                result['winning_combinations_note'] = f"Showing 20 of {len(winning_scenarios)} winning combinations"
+                result["winning_combinations_note"] = (
+                    f"Showing 20 of {len(winning_scenarios)} winning combinations"
+                )
 
         return result
 
@@ -556,9 +585,7 @@ class WinScenarioAnalyzer:
         player_scores = self.get_player_scores(week)
 
         if not player_scores:
-            return {
-                'error': f"No players found in week {week} data"
-            }
+            return {"error": f"No players found in week {week} data"}
 
         # Get pending games for metadata
         pending_games = self.get_pending_games(week)
@@ -568,79 +595,64 @@ class WinScenarioAnalyzer:
 
         print(f"Analyzing {len(player_scores)} players...")
         for idx, player_name in enumerate(sorted(player_scores.keys()), 1):
-            print(f"  [{idx}/{len(player_scores)}] {player_name}...", end='\r')
+            print(f"  [{idx}/{len(player_scores)}] {player_name}...", end="\r")
 
             # Run lightweight analysis (no detailed scenarios)
             result = self.analyze_win_scenarios(
-                week=week,
-                target_player=player_name,
-                detailed=False
+                week=week, target_player=player_name, detailed=False
             )
 
-            if 'error' not in result:
-                leaderboard.append({
-                    'player': player_name,
-                    'current_points': result['current_points'],
-                    'pending_picks': result['pending_picks'],
-                    'total_scenarios': result['total_scenarios'],
-                    'winning_scenarios': result['winning_scenarios'],
-                    'win_probability': result['win_probability'],
-                    'win_percentage': result['win_percentage']
-                })
+            if "error" not in result:
+                leaderboard.append(
+                    {
+                        "player": player_name,
+                        "current_points": result["current_points"],
+                        "pending_picks": result["pending_picks"],
+                        "total_scenarios": result["total_scenarios"],
+                        "winning_scenarios": result["winning_scenarios"],
+                        "win_probability": result["win_probability"],
+                        "win_percentage": result["win_percentage"],
+                    }
+                )
 
         print()  # Clear progress line
 
         # Sort by win probability (descending)
-        leaderboard.sort(key=lambda x: x['win_probability'], reverse=True)
+        leaderboard.sort(key=lambda x: x["win_probability"], reverse=True)
 
         return {
-            'week': week,
-            'season': self.season,
-            'pending_games': len(pending_games),
-            'total_players': len(leaderboard),
-            'leaderboard': leaderboard
+            "week": week,
+            "season": self.season,
+            "pending_games": len(pending_games),
+            "total_players": len(leaderboard),
+            "leaderboard": leaderboard,
         }
 
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description='Analyze win scenarios for confidence pool'
+    parser = argparse.ArgumentParser(description="Analyze win scenarios for confidence pool")
+    parser.add_argument("--week", type=int, required=True, help="Week number to analyze")
+    parser.add_argument(
+        "--player", type=str, help="Player name to analyze (defaults to USER_NAME from .env)"
     )
     parser.add_argument(
-        '--week',
-        type=int,
-        required=True,
-        help='Week number to analyze'
+        "--detailed", action="store_true", help="Show detailed winning combinations"
     )
     parser.add_argument(
-        '--player',
-        type=str,
-        help='Player name to analyze (defaults to USER_NAME from .env)'
+        "--all-players",
+        action="store_true",
+        help="Analyze all players and show leaderboard (ignores --player flag)",
     )
-    parser.add_argument(
-        '--detailed',
-        action='store_true',
-        help='Show detailed winning combinations'
-    )
-    parser.add_argument(
-        '--all-players',
-        action='store_true',
-        help='Analyze all players and show leaderboard (ignores --player flag)'
-    )
-    parser.add_argument(
-        '--season',
-        type=int,
-        help='Season year (defaults to current year)'
-    )
+    parser.add_argument("--season", type=int, help="Season year (defaults to current year)")
 
     args = parser.parse_args()
 
     # Load environment variables
     load_dotenv()
 
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_KEY')
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
 
     if not supabase_url or not supabase_key:
         print("Error: SUPABASE_URL and SUPABASE_KEY must be set in .env file")
@@ -648,16 +660,14 @@ def main():
 
     # Create analyzer
     analyzer = WinScenarioAnalyzer(
-        supabase_url=supabase_url,
-        supabase_key=supabase_key,
-        season=args.season
+        supabase_url=supabase_url, supabase_key=supabase_key, season=args.season
     )
 
     # Handle all-players mode
     if args.all_players:
         result = analyzer.analyze_all_players_leaderboard(week=args.week)
 
-        if 'error' in result:
+        if "error" in result:
             print(f"Error: {result['error']}")
             sys.exit(1)
 
@@ -672,28 +682,28 @@ def main():
         print(f"{'Rank':<6}{'Player':<25}{'Current':<10}{'Win Scenarios':<20}{'Probability':<12}")
         print("-" * 70)
 
-        for idx, entry in enumerate(result['leaderboard'], 1):
+        for idx, entry in enumerate(result["leaderboard"], 1):
             scenarios = f"{entry['winning_scenarios']:,} / {entry['total_scenarios']:,}"
-            print(f"{idx:<6}{entry['player']:<25}{entry['current_points']:<10}{scenarios:<20}{entry['win_percentage']:<12}")
+            print(
+                f"{idx:<6}{entry['player']:<25}{entry['current_points']:<10}{scenarios:<20}{entry['win_percentage']:<12}"
+            )
 
         print("=" * 70)
         sys.exit(0)
 
     # Single-player mode
-    player_name = args.player or os.getenv('USER_NAME')
+    player_name = args.player or os.getenv("USER_NAME")
     if not player_name:
         print("Error: --player must be specified or USER_NAME must be set in .env")
         sys.exit(1)
 
     # Run analysis
     result = analyzer.analyze_win_scenarios(
-        week=args.week,
-        target_player=player_name,
-        detailed=args.detailed
+        week=args.week, target_player=player_name, detailed=args.detailed
     )
 
     # Display results
-    if 'error' in result:
+    if "error" in result:
         print(f"Error: {result['error']}")
         sys.exit(1)
 
@@ -705,9 +715,9 @@ def main():
     print()
 
     # Display pending games with formatted picks
-    if 'pending_games_formatted' in result and result['pending_games_formatted']:
+    if "pending_games_formatted" in result and result["pending_games_formatted"]:
         print(f"Remaining Games ({result['pending_games']}):")
-        for game in result['pending_games_formatted']:
+        for game in result["pending_games_formatted"]:
             print(f"  {game}")
         print()
 
@@ -716,7 +726,7 @@ def main():
     print()
 
     # Display probability metrics
-    if result.get('using_actual_odds'):
+    if result.get("using_actual_odds"):
         print(f"Win Probability (Weighted by Odds): {result['weighted_win_percentage']}")
         print(f"Win Probability (Naive 50/50):      {result['naive_win_percentage']}")
         print()
@@ -728,36 +738,38 @@ def main():
 
     print("=" * 60)
 
-    if args.detailed and 'winning_combinations' in result:
+    if args.detailed and "winning_combinations" in result:
         print()
         print("SAMPLE WINNING COMBINATIONS:")
         print("-" * 60)
-        for idx, combo in enumerate(result['winning_combinations'], 1):
-            print(f"\n#{idx}: You score {combo['target_total']} pts, opponents max {combo['max_opponent_total']} pts")
+        for idx, combo in enumerate(result["winning_combinations"], 1):
+            print(
+                f"\n#{idx}: You score {combo['target_total']} pts, opponents max {combo['max_opponent_total']} pts"
+            )
 
-            if combo['must_win']:
+            if combo["must_win"]:
                 print("  Must win:")
-                for win in combo['must_win']:
+                for win in combo["must_win"]:
                     print(f"    - {win}")
 
-            if combo['can_lose']:
+            if combo["can_lose"]:
                 print("  Must lose:")
-                for loss in combo['can_lose']:
+                for loss in combo["can_lose"]:
                     print(f"    - {loss}")
 
-            if combo['any_outcome']:
+            if combo["any_outcome"]:
                 print("  Any outcome:")
-                for any_game in combo['any_outcome']:
+                for any_game in combo["any_outcome"]:
                     print(f"    - {any_game}")
 
-        if 'winning_combinations_note' in result:
+        if "winning_combinations_note" in result:
             print(f"\n{result['winning_combinations_note']}")
 
         print("-" * 60)
 
     # Display meta-analysis TL;DR
-    if args.detailed and 'meta_analysis' in result:
-        meta = result['meta_analysis']
+    if args.detailed and "meta_analysis" in result:
+        meta = result["meta_analysis"]
         print()
         print("=" * 60)
         print("TL;DR - META-ANALYSIS ACROSS ALL WINNING SCENARIOS")
@@ -765,56 +777,56 @@ def main():
         print()
 
         # Critical wins
-        if meta['always_win']:
+        if meta["always_win"]:
             print("🎯 CRITICAL - Must ALWAYS win these:")
-            for game_info in meta['always_win']:
+            for game_info in meta["always_win"]:
                 print(f"   {game_info['game']} (100% of winning scenarios)")
             print()
 
-        if meta['usually_win']:
+        if meta["usually_win"]:
             print("⭐ IMPORTANT - Should win these (75%+):")
-            for game_info in meta['usually_win']:
+            for game_info in meta["usually_win"]:
                 print(f"   {game_info['game']} ({game_info['win_pct']:.0f}% need win)")
             print()
 
         # Critical losses
-        if meta['always_lose']:
+        if meta["always_lose"]:
             print("❌ CRITICAL - Must ALWAYS lose these:")
-            for game_info in meta['always_lose']:
+            for game_info in meta["always_lose"]:
                 print(f"   {game_info['game']} (100% of winning scenarios)")
             print()
 
-        if meta['usually_lose']:
+        if meta["usually_lose"]:
             print("⚠️  IMPORTANT - Should lose these (75%+):")
-            for game_info in meta['usually_lose']:
+            for game_info in meta["usually_lose"]:
                 print(f"   {game_info['game']} ({game_info['lose_pct']:.0f}% need loss)")
             print()
 
         # Variable outcomes
-        if meta['sometimes_win'] or meta['sometimes_lose']:
+        if meta["sometimes_win"] or meta["sometimes_lose"]:
             print("🔀 VARIABLE - Mixed outcomes:")
             # Combine and show win/lose percentages
             variable_games = {}
-            for game_info in meta['sometimes_win'] + meta['sometimes_lose']:
-                game = game_info['game']
+            for game_info in meta["sometimes_win"] + meta["sometimes_lose"]:
+                game = game_info["game"]
                 if game not in variable_games:
                     variable_games[game] = game_info
 
             for game, info in variable_games.items():
-                if info['win_pct'] > 0 and info['lose_pct'] > 0:
+                if info["win_pct"] > 0 and info["lose_pct"] > 0:
                     print(f"   {game}")
                     print(f"      Win: {info['win_pct']:.0f}% | Lose: {info['lose_pct']:.0f}%")
             print()
 
         # Irrelevant games
-        if meta['always_any']:
+        if meta["always_any"]:
             print("💤 IRRELEVANT - Outcome doesn't matter:")
-            for game_info in meta['always_any']:
+            for game_info in meta["always_any"]:
                 print(f"   {game_info['game']}")
             print()
 
         print("=" * 60)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

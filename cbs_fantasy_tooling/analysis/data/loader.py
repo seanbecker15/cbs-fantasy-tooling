@@ -25,6 +25,7 @@ import pandas as pd
 @dataclass
 class WeekData:
     """Structured representation of a single week's results"""
+
     week_number: int
     timestamp: datetime
     max_wins_value: int
@@ -76,7 +77,9 @@ class CompetitorDataLoader:
         for filepath in files:
             week_data = self._load_week_file(filepath)
             self.weeks_data[week_data.week_number] = week_data
-            print(f"  Loaded Week {week_data.week_number}: {week_data.timestamp.strftime('%Y-%m-%d')}")
+            print(
+                f"  Loaded Week {week_data.week_number}: {week_data.timestamp.strftime('%Y-%m-%d')}"
+            )
 
     def _load_week_file(self, filepath: str) -> WeekData:
         """
@@ -88,24 +91,24 @@ class CompetitorDataLoader:
         Returns:
             WeekData object with structured week information
         """
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             data = json.load(f)
 
         # Parse timestamp
-        timestamp = datetime.fromisoformat(data['timestamp'])
+        timestamp = datetime.fromisoformat(data["timestamp"])
 
         # Parse max wins players (may be comma-separated string)
-        max_wins_players = [p.strip() for p in data['max_wins']['players'].split(',')]
-        max_points_players = [p.strip() for p in data['max_points']['players'].split(',')]
+        max_wins_players = [p.strip() for p in data["max_wins"]["players"].split(",")]
+        max_points_players = [p.strip() for p in data["max_points"]["players"].split(",")]
 
         return WeekData(
-            week_number=data['week_number'],
+            week_number=data["week_number"],
             timestamp=timestamp,
-            max_wins_value=data['max_wins']['max_wins'],
+            max_wins_value=data["max_wins"]["max_wins"],
             max_wins_players=max_wins_players,
-            max_points_value=data['max_points']['max_points'],
+            max_points_value=data["max_points"]["max_points"],
             max_points_players=max_points_players,
-            player_results=data['results']
+            player_results=data["results"],
         )
 
     def build_picks_dataframe(self) -> pd.DataFrame:
@@ -125,36 +128,30 @@ class CompetitorDataLoader:
 
         for week_num, week_data in self.weeks_data.items():
             for player in week_data.player_results:
-                player_name = player['name']
-                total_points = int(player['points'])
-                wins = player['wins']
-                losses = player['losses']
-
-                # Track which picks contributed to total points
-                # This allows us to infer win/loss for each pick
-                picks_by_confidence = sorted(
-                    player['picks'],
-                    key=lambda p: int(p['points']),
-                    reverse=True
-                )
+                player_name = player["name"]
+                total_points = int(player["points"])
+                wins = player["wins"]
+                losses = player["losses"]
 
                 # Calculate actual points each pick earned
                 # If we have perfect information, we can infer outcomes
-                for pick in player['picks']:
-                    team = pick['team']
-                    confidence = int(pick['points'])
+                for pick in player["picks"]:
+                    team = pick["team"]
+                    confidence = int(pick["points"])
 
                     # We'll mark outcome as unknown for now
                     # (can be enriched with actual game results later)
-                    rows.append({
-                        'player_name': player_name,
-                        'week': week_num,
-                        'team': team,
-                        'confidence': confidence,
-                        'total_player_points': total_points,
-                        'total_player_wins': wins,
-                        'total_player_losses': losses
-                    })
+                    rows.append(
+                        {
+                            "player_name": player_name,
+                            "week": week_num,
+                            "team": team,
+                            "confidence": confidence,
+                            "total_player_points": total_points,
+                            "total_player_wins": wins,
+                            "total_player_losses": losses,
+                        }
+                    )
 
         self.picks_df = pd.DataFrame(rows)
         return self.picks_df
@@ -180,14 +177,14 @@ class CompetitorDataLoader:
 
         player_stats = []
 
-        for player_name in self.picks_df['player_name'].unique():
-            player_weeks = self.picks_df[self.picks_df['player_name'] == player_name]
+        for player_name in self.picks_df["player_name"].unique():
+            player_weeks = self.picks_df[self.picks_df["player_name"] == player_name]
 
             # Count bonus wins
             bonus_most_points = 0
             bonus_most_wins = 0
 
-            for week_num in player_weeks['week'].unique():
+            for week_num in player_weeks["week"].unique():
                 week_data = self.weeks_data[week_num]
                 if player_name in week_data.max_points_players:
                     bonus_most_points += 1
@@ -195,22 +192,24 @@ class CompetitorDataLoader:
                     bonus_most_wins += 1
 
             # Aggregate by week to get totals
-            weekly_agg = player_weeks.groupby('week').first()
+            weekly_agg = player_weeks.groupby("week").first()
 
-            player_stats.append({
-                'player_name': player_name,
-                'weeks_played': len(weekly_agg),
-                'total_points': weekly_agg['total_player_points'].sum(),
-                'total_wins': weekly_agg['total_player_wins'].sum(),
-                'total_losses': weekly_agg['total_player_losses'].sum(),
-                'avg_points_per_week': weekly_agg['total_player_points'].mean(),
-                'avg_wins_per_week': weekly_agg['total_player_wins'].mean(),
-                'bonus_wins_most_points': bonus_most_points,
-                'bonus_wins_most_wins': bonus_most_wins
-            })
+            player_stats.append(
+                {
+                    "player_name": player_name,
+                    "weeks_played": len(weekly_agg),
+                    "total_points": weekly_agg["total_player_points"].sum(),
+                    "total_wins": weekly_agg["total_player_wins"].sum(),
+                    "total_losses": weekly_agg["total_player_losses"].sum(),
+                    "avg_points_per_week": weekly_agg["total_player_points"].mean(),
+                    "avg_wins_per_week": weekly_agg["total_player_wins"].mean(),
+                    "bonus_wins_most_points": bonus_most_points,
+                    "bonus_wins_most_wins": bonus_most_wins,
+                }
+            )
 
         self.players_df = pd.DataFrame(player_stats)
-        self.players_df = self.players_df.sort_values('total_points', ascending=False)
+        self.players_df = self.players_df.sort_values("total_points", ascending=False)
         return self.players_df
 
     def build_weekly_stats_dataframe(self) -> pd.DataFrame:
@@ -235,25 +234,27 @@ class CompetitorDataLoader:
         weekly_stats = []
 
         for week_num, week_data in self.weeks_data.items():
-            week_picks = self.picks_df[self.picks_df['week'] == week_num]
+            week_picks = self.picks_df[self.picks_df["week"] == week_num]
 
             # Get unique player stats per week
-            player_week_stats = week_picks.groupby('player_name').first()
+            player_week_stats = week_picks.groupby("player_name").first()
 
-            weekly_stats.append({
-                'week': week_num,
-                'timestamp': week_data.timestamp,
-                'num_players': len(player_week_stats),
-                'max_wins': week_data.max_wins_value,
-                'max_points': week_data.max_points_value,
-                'avg_wins': player_week_stats['total_player_wins'].mean(),
-                'avg_points': player_week_stats['total_player_points'].mean(),
-                'std_wins': player_week_stats['total_player_wins'].std(),
-                'std_points': player_week_stats['total_player_points'].std()
-            })
+            weekly_stats.append(
+                {
+                    "week": week_num,
+                    "timestamp": week_data.timestamp,
+                    "num_players": len(player_week_stats),
+                    "max_wins": week_data.max_wins_value,
+                    "max_points": week_data.max_points_value,
+                    "avg_wins": player_week_stats["total_player_wins"].mean(),
+                    "avg_points": player_week_stats["total_player_points"].mean(),
+                    "std_wins": player_week_stats["total_player_wins"].std(),
+                    "std_points": player_week_stats["total_player_points"].std(),
+                }
+            )
 
         self.weekly_stats_df = pd.DataFrame(weekly_stats)
-        self.weekly_stats_df = self.weekly_stats_df.sort_values('week')
+        self.weekly_stats_df = self.weekly_stats_df.sort_values("week")
         return self.weekly_stats_df
 
     def get_field_consensus(self, week: int) -> pd.DataFrame:
@@ -274,17 +275,18 @@ class CompetitorDataLoader:
         if self.picks_df is None:
             self.build_picks_dataframe()
 
-        week_picks = self.picks_df[self.picks_df['week'] == week]
-        num_players = week_picks['player_name'].nunique()
+        week_picks = self.picks_df[self.picks_df["week"] == week]
+        num_players = week_picks["player_name"].nunique()
 
-        consensus = week_picks.groupby('team').agg({
-            'player_name': 'count',
-            'confidence': ['mean', 'sum']
-        }).reset_index()
+        consensus = (
+            week_picks.groupby("team")
+            .agg({"player_name": "count", "confidence": ["mean", "sum"]})
+            .reset_index()
+        )
 
-        consensus.columns = ['team', 'pick_count', 'avg_confidence', 'total_confidence']
-        consensus['pick_percentage'] = consensus['pick_count'] / num_players
-        consensus = consensus.sort_values('pick_count', ascending=False)
+        consensus.columns = ["team", "pick_count", "avg_confidence", "total_confidence"]
+        consensus["pick_percentage"] = consensus["pick_count"] / num_players
+        consensus = consensus.sort_values("pick_count", ascending=False)
 
         return consensus
 
@@ -302,12 +304,12 @@ class CompetitorDataLoader:
         if self.picks_df is None:
             self.build_picks_dataframe()
 
-        picks = self.picks_df[self.picks_df['player_name'] == player_name]
+        picks = self.picks_df[self.picks_df["player_name"] == player_name]
 
         if week is not None:
-            picks = picks[picks['week'] == week]
+            picks = picks[picks["week"] == week]
 
-        return picks.sort_values(['week', 'confidence'], ascending=[True, False])
+        return picks.sort_values(["week", "confidence"], ascending=[True, False])
 
     def load_and_build_all(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
@@ -336,4 +338,3 @@ def load_competitor_data(data_dir: str = "out") -> Tuple[pd.DataFrame, pd.DataFr
     """
     loader = CompetitorDataLoader(data_dir)
     return loader.load_and_build_all()
-

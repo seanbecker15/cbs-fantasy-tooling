@@ -1,6 +1,7 @@
 from models.game_results import GameResults
 from providers.file import load_json
 
+
 def load_game_results(week: int) -> GameResults:
     """
     Load game results for a specific week from the database.
@@ -13,5 +14,3 @@ def load_game_results(week: int) -> GameResults:
     filename = f"week_{week}_game_results.json"
     data = load_json(filename)
     return GameResults.from_dict(data)
-    
-    

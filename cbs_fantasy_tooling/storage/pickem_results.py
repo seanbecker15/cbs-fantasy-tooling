@@ -1,6 +1,7 @@
 from models.pickem_results import PickemResults
 from providers.file import load_json
 
+
 def load_pickem_results(week: int) -> PickemResults:
     """
     Load game results for a specific week from the database.
@@ -13,5 +14,3 @@ def load_pickem_results(week: int) -> PickemResults:
     filename = f"week_{week}_pickem_results.json"
     data = load_json(filename)
     return PickemResults.from_dict(data)
-    
-    

@@ -1,13 +1,13 @@
-
 from datetime import datetime
 import requests
 
 from cbs_fantasy_tooling import config
 
 SPORT = "americanfootball_nfl"
-REGION = "us"             # us|uk|eu|au (controls which books)
-MARKETS = "h2h"           # moneylines for win probabilities
+REGION = "us"  # us|uk|eu|au (controls which books)
+MARKETS = "h2h"  # moneylines for win probabilities
 ODDS_FORMAT = "american"  # american|decimal
+
 
 def fetch_odds(from_date: datetime, to_date: datetime) -> list[dict]:
     """Fetch current NFL moneylines across US books, restricted to *this* week."""
@@ -26,6 +26,7 @@ def fetch_odds(from_date: datetime, to_date: datetime) -> list[dict]:
     # Optional: examine quota headers
     # print("Remaining:", r.headers.get("x-requests-remaining"), "Used:", r.headers.get("x-requests-used"))
     return r.json()
+
 
 def format_date(date: datetime) -> str:
     """Takes datetime and returns formatted string for API."""

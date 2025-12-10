@@ -182,7 +182,9 @@ class SupabaseDatabase:
             week_number = results_data.week_number
 
             # Sort results by points to calculate rankings
-            sorted_results = sorted(results_data.results, key=lambda r: int(r.results[0]), reverse=True)
+            sorted_results = sorted(
+                results_data.results, key=lambda r: int(r.results[0]), reverse=True
+            )
             max_points = int(sorted_results[0].results[0]) if sorted_results else 0
 
             # Prepare player results for upsert
@@ -195,42 +197,46 @@ class SupabaseDatabase:
 
                 # Player results record with ranking metadata
                 player_result = {
-                    'season': self.season,
-                    'week_number': week_number,
-                    'player_name': row.name,
-                    'points': points,
-                    'wins': row.results[1],
-                    'losses': row.results[2],
-                    'rank': rank,
-                    'points_from_leader': points_from_leader,
-                    'updated_at': results_data.timestamp.isoformat()
+                    "season": self.season,
+                    "week_number": week_number,
+                    "player_name": row.name,
+                    "points": points,
+                    "wins": row.results[1],
+                    "losses": row.results[2],
+                    "rank": rank,
+                    "points_from_leader": points_from_leader,
+                    "updated_at": results_data.timestamp.isoformat(),
                 }
                 player_results.append(player_result)
 
                 # Player picks records
                 for pick in row.picks:
                     pick_record = {
-                        'season': self.season,
-                        'week_number': week_number,
-                        'player_name': row.name,
-                        'team': pick['team'],
-                        'confidence_points': int(pick['points']),
-                        'updated_at': results_data.timestamp.isoformat()
+                        "season": self.season,
+                        "week_number": week_number,
+                        "player_name": row.name,
+                        "team": pick["team"],
+                        "confidence_points": int(pick["points"]),
+                        "updated_at": results_data.timestamp.isoformat(),
                     }
                     player_picks_all.append(pick_record)
 
             # Upsert player results (insert or update on conflict)
-            print(f"Upserting {len(player_results)} player results for season {self.season} week {week_number}...")
-            self.client.table(self.results_table)\
-                .upsert(player_results, on_conflict='season,week_number,player_name')\
-                .execute()
+            print(
+                f"Upserting {len(player_results)} player results for season {self.season} week {week_number}..."
+            )
+            self.client.table(self.results_table).upsert(
+                player_results, on_conflict="season,week_number,player_name"
+            ).execute()
 
             # Upsert player picks
             if player_picks_all:
-                print(f"Upserting {len(player_picks_all)} player picks for season {self.season} week {week_number}...")
-                self.client.table(self.picks_table)\
-                    .upsert(player_picks_all, on_conflict='season,week_number,player_name,team')\
-                    .execute()
+                print(
+                    f"Upserting {len(player_picks_all)} player picks for season {self.season} week {week_number}..."
+                )
+                self.client.table(self.picks_table).upsert(
+                    player_picks_all, on_conflict="season,week_number,player_name,team"
+                ).execute()
 
             print(f"Successfully saved data for season {self.season} week {week_number}")
             return True
@@ -238,6 +244,7 @@ class SupabaseDatabase:
         except Exception as e:
             print(f"Error saving to database: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -260,18 +267,19 @@ class SupabaseDatabase:
 
         for status in game_statuses:
             record = {**status}
-            record.setdefault('updated_at', timestamp)
+            record.setdefault("updated_at", timestamp)
             records.append(record)
 
         try:
-            self.client.table(self.game_status_table)\
-                .upsert(records, on_conflict='season,week_number,home_team,away_team')\
-                .execute()
+            self.client.table(self.game_status_table).upsert(
+                records, on_conflict="season,week_number,home_team,away_team"
+            ).execute()
             print(f"Upserted {len(records)} game status records")
             return True
         except Exception as e:
             print(f"Error upserting game status records: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -299,30 +307,32 @@ class SupabaseDatabase:
 
                 team_pairs = [
                     (status.home_team, status.away_team),
-                    (status.away_team, status.home_team)
+                    (status.away_team, status.home_team),
                 ]
 
                 for team, opponent in team_pairs:
                     update_payload: Dict[str, Any] = {
-                        'opponent_team': opponent,
-                        'updated_at': timestamp,
-                        'is_correct': None
+                        "opponent_team": opponent,
+                        "updated_at": timestamp,
+                        "is_correct": None,
                     }
 
                     if game_time_iso:
-                        update_payload['game_time'] = game_time_iso
+                        update_payload["game_time"] = game_time_iso
                     else:
-                        update_payload['game_time'] = None
+                        update_payload["game_time"] = None
 
                     if winning_team is not None:
-                        update_payload['is_correct'] = team == winning_team
+                        update_payload["is_correct"] = team == winning_team
 
-                    response = self.client.table(self.picks_table)\
-                        .update(update_payload)\
-                        .eq('season', status.season)\
-                        .eq('week_number', status.week_number)\
-                        .eq('team', team)\
+                    response = (
+                        self.client.table(self.picks_table)
+                        .update(update_payload)
+                        .eq("season", status.season)
+                        .eq("week_number", status.week_number)
+                        .eq("team", team)
                         .execute()
+                    )
 
                     if response.data:
                         total_updates += len(response.data)
@@ -337,6 +347,7 @@ class SupabaseDatabase:
         except Exception as e:
             print(f"Error updating player picks with game data: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -355,48 +366,51 @@ class SupabaseDatabase:
 
         try:
             # Get player results
-            results_response = self.client.table(self.results_table)\
-                .select('*')\
-                .eq('season', season)\
-                .eq('week_number', week_number)\
+            results_response = (
+                self.client.table(self.results_table)
+                .select("*")
+                .eq("season", season)
+                .eq("week_number", week_number)
                 .execute()
+            )
 
             if not results_response.data:
                 return None
 
             # Get player picks
-            picks_response = self.client.table(self.picks_table)\
-                .select('*')\
-                .eq('season', season)\
-                .eq('week_number', week_number)\
+            picks_response = (
+                self.client.table(self.picks_table)
+                .select("*")
+                .eq("season", season)
+                .eq("week_number", week_number)
                 .execute()
+            )
 
             # Group picks by player
             picks_by_player = {}
             for pick in picks_response.data:
-                player_name = pick['player_name']
+                player_name = pick["player_name"]
                 if player_name not in picks_by_player:
                     picks_by_player[player_name] = []
-                picks_by_player[player_name].append({
-                    'team': pick['team'],
-                    'points': str(pick['confidence_points'])
-                })
+                picks_by_player[player_name].append(
+                    {"team": pick["team"], "points": str(pick["confidence_points"])}
+                )
 
             # Build PickemResults
             results = []
             for record in results_response.data:
                 row = PickemResult()
-                row.name = record['player_name']
-                row.results = [record['points'], record['wins'], record['losses']]
-                row.picks = picks_by_player.get(record['player_name'], [])
+                row.name = record["player_name"]
+                row.results = [record["points"], record["wins"], record["losses"]]
+                row.picks = picks_by_player.get(record["player_name"], [])
                 results.append(row)
 
             results_data = PickemResults(results, week_number)
 
             # Get timestamp from first record if available
-            if results_response.data and 'updated_at' in results_response.data[0]:
+            if results_response.data and "updated_at" in results_response.data[0]:
                 results_data.timestamp = datetime.fromisoformat(
-                    results_response.data[0]['updated_at'].replace('Z', '+00:00')
+                    results_response.data[0]["updated_at"].replace("Z", "+00:00")
                 )
 
             return results_data
@@ -404,6 +418,7 @@ class SupabaseDatabase:
         except Exception as e:
             print(f"Error retrieving from database: {e}")
             import traceback
+
             traceback.print_exc()
             return None
 
@@ -420,15 +435,17 @@ class SupabaseDatabase:
         season = season or self.season
 
         try:
-            response = self.client.table(self.results_table)\
-                .select('week_number')\
-                .eq('season', season)\
-                .order('week_number', desc=True)\
-                .limit(1)\
+            response = (
+                self.client.table(self.results_table)
+                .select("week_number")
+                .eq("season", season)
+                .order("week_number", desc=True)
+                .limit(1)
                 .execute()
+            )
 
             if response.data:
-                return response.data[0]['week_number']
+                return response.data[0]["week_number"]
             return None
 
         except Exception as e:
@@ -444,7 +461,7 @@ class SupabaseDatabase:
         """
         try:
             # Try a simple query
-            self.client.table(self.results_table).select('id').limit(1).execute()
+            self.client.table(self.results_table).select("id").limit(1).execute()
             print("Database connection test successful")
             return True
         except Exception as e:
@@ -468,18 +485,14 @@ class SupabaseDatabase:
             print(f"Deleting season {season} week {week_number} data...")
 
             # Delete player results
-            self.client.table(self.results_table)\
-                .delete()\
-                .eq('season', season)\
-                .eq('week_number', week_number)\
-                .execute()
+            self.client.table(self.results_table).delete().eq("season", season).eq(
+                "week_number", week_number
+            ).execute()
 
             # Delete player picks
-            self.client.table(self.picks_table)\
-                .delete()\
-                .eq('season', season)\
-                .eq('week_number', week_number)\
-                .execute()
+            self.client.table(self.picks_table).delete().eq("season", season).eq(
+                "week_number", week_number
+            ).execute()
 
             print(f"Successfully deleted season {season} week {week_number} data")
             return True
@@ -489,7 +502,9 @@ class SupabaseDatabase:
             return False
 
 
-def compare_results(old_results: list[PickemResult], new_results: list[PickemResult]) -> Dict[str, Any]:
+def compare_results(
+    old_results: list[PickemResult], new_results: list[PickemResult]
+) -> Dict[str, Any]:
     """
     Deep comparison of two result sets to detect changes.
 
@@ -508,9 +523,9 @@ def compare_results(old_results: list[PickemResult], new_results: list[PickemRes
     # Quick checks
     if old_results is None or new_results is None:
         return {
-            'changed': True,
-            'changes': ['Initial data or one set is None'],
-            'summary': 'Initial data load or missing data'
+            "changed": True,
+            "changes": ["Initial data or one set is None"],
+            "summary": "Initial data load or missing data",
         }
 
     if len(old_results) != len(new_results):
@@ -532,8 +547,16 @@ def compare_results(old_results: list[PickemResult], new_results: list[PickemRes
 
         # Compare results (points, wins, losses)
         if old_row.results != new_row.results:
-            old_points, old_wins, old_losses = old_row.results[0], old_row.results[1], old_row.results[2]
-            new_points, new_wins, new_losses = new_row.results[0], new_row.results[1], new_row.results[2]
+            old_points, old_wins, old_losses = (
+                old_row.results[0],
+                old_row.results[1],
+                old_row.results[2],
+            )
+            new_points, new_wins, new_losses = (
+                new_row.results[0],
+                new_row.results[1],
+                new_row.results[2],
+            )
 
             if old_points != new_points:
                 changes.append(f"{name}: points {old_points} → {new_points}")
@@ -543,8 +566,8 @@ def compare_results(old_results: list[PickemResult], new_results: list[PickemRes
                 changes.append(f"{name}: losses {old_losses} → {new_losses}")
 
         # Compare picks (deep comparison)
-        old_picks_sorted = sorted(old_row.picks, key=lambda p: p.get('team', ''))
-        new_picks_sorted = sorted(new_row.picks, key=lambda p: p.get('team', ''))
+        old_picks_sorted = sorted(old_row.picks, key=lambda p: p.get("team", ""))
+        new_picks_sorted = sorted(new_row.picks, key=lambda p: p.get("team", ""))
 
         if old_picks_sorted != new_picks_sorted:
             changes.append(f"{name}: picks changed")
@@ -558,8 +581,4 @@ def compare_results(old_results: list[PickemResult], new_results: list[PickemRes
     changed = len(changes) > 0
     summary = f"{len(changes)} change(s) detected" if changed else "No changes detected"
 
-    return {
-        'changed': changed,
-        'changes': changes,
-        'summary': summary
-    }
+    return {"changed": changed, "changes": changes, "summary": summary}

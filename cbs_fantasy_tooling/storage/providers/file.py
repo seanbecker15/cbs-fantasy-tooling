@@ -14,8 +14,9 @@ def save_json(data: dict, filename: str) -> None:
     import json
 
     filepath = os.path.join(config.output_dir, filename)
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         json.dump(data, f, indent=2)
+
 
 def load_json(filename: str) -> dict:
     """
@@ -29,6 +30,6 @@ def load_json(filename: str) -> dict:
     import json
 
     filepath = os.path.join(config.output_dir, filename)
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
     return data

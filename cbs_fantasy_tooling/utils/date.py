@@ -11,7 +11,7 @@ def get_current_nfl_week() -> int:
         Current NFL week number (1-18)
     """
     now = datetime.now()
-    start_date = datetime.strptime(config.week_one_start_date, '%Y-%m-%d')
+    start_date = datetime.strptime(config.week_one_start_date, "%Y-%m-%d")
     weeks_ellapsed = (now - start_date).days // 7
     return min(max(weeks_ellapsed, 1), 18)
 

@@ -36,9 +36,9 @@ def analyze_competitors(
     Returns:
         Dictionary with competitor analysis results
     """
-    print("="*60)
+    print("=" * 60)
     print("COMPETITOR INTELLIGENCE ANALYSIS")
-    print("="*60)
+    print("=" * 60)
 
     # Load data
     print("\nLoading competitor data...")
@@ -54,49 +54,50 @@ def analyze_competitors(
     profiles = build_player_profiles(enriched_picks)
     composition = analyze_league_composition(profiles)
 
-    print(f"\nLeague Composition:")
+    print("\nLeague Composition:")
     print(f"  Total Players: {composition['total_players']}")
-    print(f"\nStrategy Distribution:")
-    for strategy, count in composition['strategy_counts'].items():
-        pct = composition['strategy_percentages'][strategy]
+    print("\nStrategy Distribution:")
+    for strategy, count in composition["strategy_counts"].items():
+        pct = composition["strategy_percentages"][strategy]
         print(f"  {strategy}: {count} ({pct:.1%})")
 
-    print(f"\nLeague Averages:")
+    print("\nLeague Averages:")
     print(f"  Contrarian Rate: {composition['avg_contrarian_rate']:.1%}")
     print(f"  Win Rate: {composition['avg_win_rate']:.1%}")
 
     # Top performers
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TOP 10 PERFORMERS")
-    print("="*60)
+    print("=" * 60)
     top_performers = get_top_performers(profiles, n=10)
     for i, p in enumerate(top_performers, 1):
-        print(f"{i}. {p['player_name']:<25} {p['strategy']:<25} {p['avg_points_per_week']:.1f} pts/wk")
+        print(
+            f"{i}. {p['player_name']:<25} {p['strategy']:<25} {p['avg_points_per_week']:.1f} pts/wk"
+        )
 
     # Field statistics
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("FIELD STATISTICS")
-    print("="*60)
+    print("=" * 60)
     field_stats = get_field_statistics(data_dir)
     print(f"\nTotal Players Analyzed: {field_stats['total_players']}")
     print("Strategy Distribution:")
-    for strategy, count in field_stats['strategy_distribution'].items():
-        pct = count / field_stats['total_players']
+    for strategy, count in field_stats["strategy_distribution"].items():
+        pct = count / field_stats["total_players"]
         print(f"  {strategy}: {count} ({pct:.1%})")
     print(f"\nAverage Contrarian Rate: {field_stats['avg_contrarian_rate']:.1%}")
     print(f"Average Win Rate: {field_stats['avg_win_rate']:.1%}")
     print(f"Average Points per Week: {field_stats['avg_points_per_week']:.2f} pts")
     print("\nTop 5 Performers:")
-    for i, p in enumerate(field_stats['top_performers'], 1):
+    for i, p in enumerate(field_stats["top_performers"], 1):
         print(f"{i}. {p['name']:<25} {p['strategy']:<25} {p['avg_points']:.1f} pts/wk")
-    
 
     # Contrarian performance
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("CONTRARIAN PERFORMANCE HISTORY")
-    print("="*60)
+    print("=" * 60)
     contrarian_perf = analyze_contrarian_performance_history(enriched_picks)
-    print(f"\nOverall Statistics:")
+    print("\nOverall Statistics:")
     print(f"  Total contrarian picks: {contrarian_perf['total_contrarian_picks']}")
     print(f"  Contrarian win rate: {contrarian_perf['contrarian_win_rate']:.1%}")
     print(f"  Contrarian avg points: {contrarian_perf['contrarian_avg_points']:.2f}")
@@ -106,15 +107,11 @@ def analyze_competitors(
     # Week-specific contrarian opportunities
     opportunities = None
     if week:
-        print(f"\n" + "="*60)
+        print("\n" + "=" * 60)
         print(f"WEEK {week} CONTRARIAN OPPORTUNITIES")
-        print("="*60)
+        print("=" * 60)
         opportunities = find_contrarian_opportunities_from_data(
-            enriched_picks,
-            favorites,
-            week=week,
-            min_consensus=0.75,
-            min_upset_probability=0.30
+            enriched_picks, favorites, week=week, min_consensus=0.75, min_upset_probability=0.30
         )
         if opportunities:
             print(f"\nFound {len(opportunities)} contrarian opportunities:")

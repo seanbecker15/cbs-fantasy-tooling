@@ -20,6 +20,7 @@ import numpy as np
 
 class StrategyType(str, Enum):
     """Player strategy classification"""
+
     CHALK = "Chalk-MaxPoints"
     SLIGHT_CONTRARIAN = "Slight-Contrarian"
     AGGRESSIVE_CONTRARIAN = "Aggressive-Contrarian"
@@ -28,6 +29,7 @@ class StrategyType(str, Enum):
 @dataclass
 class PlayerProfile:
     """Complete player strategy profile"""
+
     player_name: str
     strategy: StrategyType
     contrarian_rate: float
@@ -52,7 +54,7 @@ def classify_player_strategy(player_picks: pd.DataFrame) -> StrategyType:
     if len(player_picks) == 0:
         return StrategyType.CHALK
 
-    contrarian_rate = player_picks['is_contrarian'].mean()
+    contrarian_rate = player_picks["is_contrarian"].mean()
 
     if contrarian_rate < 0.10:
         return StrategyType.CHALK
@@ -72,24 +74,24 @@ def calculate_player_metrics(player_picks: pd.DataFrame) -> Dict:
     Returns:
         Dictionary of player metrics
     """
-    player_name = player_picks['player_name'].iloc[0]
+    player_name = player_picks["player_name"].iloc[0]
     total_picks = len(player_picks)
-    weeks_played = player_picks['week'].nunique()
+    weeks_played = player_picks["week"].nunique()
 
     # Contrarian metrics
-    contrarian_rate = player_picks['is_contrarian'].mean()
-    contrarian_picks = player_picks[player_picks['is_contrarian']]
+    contrarian_rate = player_picks["is_contrarian"].mean()
+    contrarian_picks = player_picks[player_picks["is_contrarian"]]
 
     if len(contrarian_picks) > 0:
-        avg_conf_contrarian = contrarian_picks['confidence'].mean()
+        avg_conf_contrarian = contrarian_picks["confidence"].mean()
     else:
         avg_conf_contrarian = 0.0
 
     # Performance metrics
-    win_rate = player_picks['won'].mean()
+    win_rate = player_picks["won"].mean()
 
     # Weekly performance for consistency
-    weekly_points = player_picks.groupby('week')['points_earned'].sum()
+    weekly_points = player_picks.groupby("week")["points_earned"].sum()
     if len(weekly_points) > 1:
         consistency_score = 1.0 - (weekly_points.std() / weekly_points.mean())
     else:
@@ -98,14 +100,14 @@ def calculate_player_metrics(player_picks: pd.DataFrame) -> Dict:
     avg_points_per_week = weekly_points.mean()
 
     return {
-        'player_name': player_name,
-        'total_picks': total_picks,
-        'weeks_played': weeks_played,
-        'contrarian_rate': contrarian_rate,
-        'win_rate': win_rate,
-        'avg_points_per_week': avg_points_per_week,
-        'avg_confidence_on_contrarian': avg_conf_contrarian,
-        'consistency_score': consistency_score
+        "player_name": player_name,
+        "total_picks": total_picks,
+        "weeks_played": weeks_played,
+        "contrarian_rate": contrarian_rate,
+        "win_rate": win_rate,
+        "avg_points_per_week": avg_points_per_week,
+        "avg_confidence_on_contrarian": avg_conf_contrarian,
+        "consistency_score": consistency_score,
     }
 
 
@@ -121,10 +123,8 @@ def build_player_profiles(enriched_picks_df: pd.DataFrame) -> List[Dict]:
     """
     profiles = []
 
-    for player_name in enriched_picks_df['player_name'].unique():
-        player_picks = enriched_picks_df[
-            enriched_picks_df['player_name'] == player_name
-        ]
+    for player_name in enriched_picks_df["player_name"].unique():
+        player_picks = enriched_picks_df[enriched_picks_df["player_name"] == player_name]
 
         # Calculate metrics
         metrics = calculate_player_metrics(player_picks)
@@ -133,10 +133,7 @@ def build_player_profiles(enriched_picks_df: pd.DataFrame) -> List[Dict]:
         strategy = classify_player_strategy(player_picks)
 
         # Build profile
-        profile = {
-            **metrics,
-            'strategy': strategy
-        }
+        profile = {**metrics, "strategy": strategy}
 
         profiles.append(profile)
 
@@ -155,19 +152,17 @@ def analyze_league_composition(profiles: List[Dict]) -> Dict:
     """
     strategy_counts = {}
     for strategy_type in StrategyType:
-        count = sum(1 for p in profiles if p['strategy'] == strategy_type)
+        count = sum(1 for p in profiles if p["strategy"] == strategy_type)
         strategy_counts[strategy_type.value] = count
 
     total_players = len(profiles)
 
     return {
-        'total_players': total_players,
-        'strategy_counts': strategy_counts,
-        'strategy_percentages': {
-            k: v / total_players for k, v in strategy_counts.items()
-        },
-        'avg_contrarian_rate': np.mean([p['contrarian_rate'] for p in profiles]),
-        'avg_win_rate': np.mean([p['win_rate'] for p in profiles])
+        "total_players": total_players,
+        "strategy_counts": strategy_counts,
+        "strategy_percentages": {k: v / total_players for k, v in strategy_counts.items()},
+        "avg_contrarian_rate": np.mean([p["contrarian_rate"] for p in profiles]),
+        "avg_win_rate": np.mean([p["win_rate"] for p in profiles]),
     }
 
 
@@ -182,16 +177,11 @@ def get_top_performers(profiles: List[Dict], n: int = 10) -> List[Dict]:
     Returns:
         List of top performer profiles
     """
-    sorted_profiles = sorted(
-        profiles,
-        key=lambda p: p['avg_points_per_week'],
-        reverse=True
-    )
+    sorted_profiles = sorted(profiles, key=lambda p: p["avg_points_per_week"], reverse=True)
     return sorted_profiles[:n]
 
 
-def get_players_by_strategy(profiles: List[Dict],
-                              strategy: StrategyType) -> List[Dict]:
+def get_players_by_strategy(profiles: List[Dict], strategy: StrategyType) -> List[Dict]:
     """
     Filter players by strategy type.
 
@@ -202,4 +192,4 @@ def get_players_by_strategy(profiles: List[Dict],
     Returns:
         List of profiles matching the strategy
     """
-    return [p for p in profiles if p['strategy'] == strategy]
+    return [p for p in profiles if p["strategy"] == strategy]

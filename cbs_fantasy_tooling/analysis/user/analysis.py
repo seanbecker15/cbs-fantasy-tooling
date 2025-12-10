@@ -8,8 +8,13 @@ from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 from cbs_fantasy_tooling.analysis.core.simulator import simulate_week_once
 
 
-def simulate_user_picks(user_input: str | list, week_mapping: list[dict], game_probs: np.ndarray,
-                       others_mix: dict, n_sims: int = N_SIMS) -> dict | None:
+def simulate_user_picks(
+    user_input: str | list,
+    week_mapping: list[dict],
+    game_probs: np.ndarray,
+    others_mix: dict,
+    n_sims: int = N_SIMS,
+) -> dict | None:
     """
     Simulate user picks against the field using Monte Carlo analysis.
 
@@ -65,7 +70,7 @@ def simulate_user_picks(user_input: str | list, week_mapping: list[dict], game_p
         "expected_wins": float(user_wins.mean()),
         "P(get_Most_Wins_bonus)": float(user_mw_bonus.mean()),
         "P(get_Most_Points_bonus)": float(user_mp_bonus.mean()),
-        "expected_bonus_points": float(5*user_mw_bonus.mean() + 10*user_mp_bonus.mean()),
+        "expected_bonus_points": float(5 * user_mw_bonus.mean() + 10 * user_mp_bonus.mean()),
         "expected_total_points": float(user_totals.mean()),
         "stdev_total_points": float(user_totals.std(ddof=1)),
         "p10_total_points": float(np.percentile(user_totals, 10)),
@@ -76,8 +81,12 @@ def simulate_user_picks(user_input: str | list, week_mapping: list[dict], game_p
     return summary, picks, confidence
 
 
-def analyze_user_picks(user_picks: np.ndarray, user_confidence: np.ndarray,
-                      week_mapping: list[dict], game_probs: np.ndarray) -> dict:
+def analyze_user_picks(
+    user_picks: np.ndarray,
+    user_confidence: np.ndarray,
+    week_mapping: list[dict],
+    game_probs: np.ndarray,
+) -> dict:
     """
     Analyze user picks to identify contrarian choices, risk level, and expected value.
 
@@ -96,7 +105,7 @@ def analyze_user_picks(user_picks: np.ndarray, user_confidence: np.ndarray,
         "high_confidence_games": [],
         "low_confidence_games": [],
         "expected_wins": 0.0,
-        "risk_assessment": "Unknown"
+        "risk_assessment": "Unknown",
     }
 
     contrarian_count = 0
@@ -109,7 +118,7 @@ def analyze_user_picks(user_picks: np.ndarray, user_confidence: np.ndarray,
             "confidence": int(conf),
             "is_contrarian": pick == 0,
             "favorite_prob": float(prob),
-            "pick_prob": float(prob if pick == 1 else 1 - prob)
+            "pick_prob": float(prob if pick == 1 else 1 - prob),
         }
 
         if pick == 0:  # Contrarian pick

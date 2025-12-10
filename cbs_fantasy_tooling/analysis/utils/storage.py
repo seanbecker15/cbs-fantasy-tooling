@@ -8,8 +8,13 @@ from cbs_fantasy_tooling.analysis.core.config import STRATEGY_CODES
 from cbs_fantasy_tooling.utils.date import get_current_nfl_week
 
 
-def save_predictions(strategy_name: str, picks: np.ndarray, confidence: np.ndarray,
-                    week_mapping: list[dict], game_probs: np.ndarray = None) -> str:
+def save_predictions(
+    strategy_name: str,
+    picks: np.ndarray,
+    confidence: np.ndarray,
+    week_mapping: list[dict],
+    game_probs: np.ndarray = None,
+) -> str:
     """
     Save strategy predictions to JSON file following the existing file naming pattern.
 
@@ -41,9 +46,9 @@ def save_predictions(strategy_name: str, picks: np.ndarray, confidence: np.ndarr
             "week": current_week,
             "generated_at": datetime.now().isoformat(),
             "total_games": len(week_mapping),
-            "simulator_version": "v2"
+            "simulator_version": "v2",
         },
-        "games": []
+        "games": [],
     }
 
     # Add each game with predictions
@@ -63,8 +68,10 @@ def save_predictions(strategy_name: str, picks: np.ndarray, confidence: np.ndarr
                 "pick_team": pick_team,
                 "pick_is_favorite": pick_is_favorite,
                 "confidence_level": int(confidence[i]),
-                "confidence_rank": int(len(week_mapping) - confidence[i] + 1)  # 1 = highest confidence
-            }
+                "confidence_rank": int(
+                    len(week_mapping) - confidence[i] + 1
+                ),  # 1 = highest confidence
+            },
         }
         predictions["games"].append(game_data)
 
@@ -72,7 +79,7 @@ def save_predictions(strategy_name: str, picks: np.ndarray, confidence: np.ndarr
     predictions["games"].sort(key=lambda x: x["prediction"]["confidence_level"], reverse=True)
 
     # Save to file
-    with open(filepath, 'w', encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(predictions, f, indent=2, ensure_ascii=False)
 
     return filename

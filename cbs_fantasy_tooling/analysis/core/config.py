@@ -30,19 +30,25 @@ STRATEGY_CODES = {
     "Slight-Contrarian": "slight",
     "Aggressive-Contrarian": "aggress",
     "Random-MidShuffle": "shuffle",
-    "Custom-User": "user"
+    "Custom-User": "user",
 }
+
 
 # Field composition
 # Uses actual field composition from historical data analysis if available
 def get_field_composition():
     """Get field composition mix for the league."""
     try:
-        from cbs_fantasy_tooling.analysis.competitor.field_adapter import get_actual_field_composition
+        from cbs_fantasy_tooling.analysis.competitor.field_adapter import (
+            get_actual_field_composition,
+        )
+
         USER_NAME = os.getenv("USER_NAME")
         strategy_mix = get_actual_field_composition(exclude_user=USER_NAME)
         print(f"Using ACTUAL field composition from historical data (excluding {USER_NAME}):")
-        print(f"  Chalk: {strategy_mix['Chalk-MaxPoints']}, Slight: {strategy_mix['Slight-Contrarian']}, Aggressive: {strategy_mix['Aggressive-Contrarian']}")
+        print(
+            f"  Chalk: {strategy_mix['Chalk-MaxPoints']}, Slight: {strategy_mix['Slight-Contrarian']}, Aggressive: {strategy_mix['Aggressive-Contrarian']}"
+        )
         return strategy_mix
     except (ImportError, FileNotFoundError) as e:
         # Fallback to theoretical if field_adapter not available or data incomplete

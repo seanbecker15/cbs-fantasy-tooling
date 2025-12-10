@@ -25,3 +25,6 @@ venv/
 # Python egg files
 *.egg-info/
 *.egg
+
+# Taskfile
+.task

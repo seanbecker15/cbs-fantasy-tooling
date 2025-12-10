@@ -8,8 +8,10 @@ from cbs_fantasy_tooling.storage.providers.database import SupabaseDatabase
 
 from . import Publisher
 
+
 class DatabasePublisher(Publisher):
     """Publisher that saves results to Supabase database."""
+
     name = "database"
 
     def __init__(self, config: Dict[str, Any]):
@@ -26,8 +28,8 @@ class DatabasePublisher(Publisher):
         self.db = None
 
         if self.validate_config():
-            season = config.get('season')
-            self.db = SupabaseDatabase(config['url'], config['key'], season=season)
+            season = config.get("season")
+            self.db = SupabaseDatabase(config["url"], config["key"], season=season)
 
     def validate_config(self) -> bool:
         """
@@ -36,7 +38,7 @@ class DatabasePublisher(Publisher):
         Returns:
             True if configuration is valid, False otherwise
         """
-        required_keys = ['url', 'key']
+        required_keys = ["url", "key"]
         for key in required_keys:
             if key not in self.config or not self.config[key]:
                 print(f"Database publisher missing required config: {key}")
@@ -77,9 +79,10 @@ class DatabasePublisher(Publisher):
         except Exception as e:
             print(f"Error publishing to database: {e}")
             import traceback
+
             traceback.print_exc()
             return False
-        
+
     def publish_game_results(self, results_data: GameResults) -> bool:
         """
         Publish game results to Supabase database.
@@ -99,7 +102,7 @@ class DatabasePublisher(Publisher):
             if not self.db.test_connection():
                 print("Database connection failed")
                 return False
-            
+
             # Prepare data for upsert
             game_results = results_data.games
             db_payload = [game_status.to_dict() for game_status in game_results]
@@ -108,10 +111,12 @@ class DatabasePublisher(Publisher):
                 print(f"Upserted {len(db_payload)} game statuses into the database.")
                 player_picks_saved = self.db.update_player_picks_from_game_statuses(game_results)
                 if player_picks_saved:
-                    print(f"Updated player picks based on latest game outcomes.")
+                    print("Updated player picks based on latest game outcomes.")
 
             if saved:
-                print(f"Successfully published game results for week {results_data.week} to database")
+                print(
+                    f"Successfully published game results for week {results_data.week} to database"
+                )
             else:
                 print("Failed to publish game results to database")
 
@@ -120,5 +125,6 @@ class DatabasePublisher(Publisher):
         except Exception as e:
             print(f"Error publishing game results to database: {e}")
             import traceback
+
             traceback.print_exc()
             return False

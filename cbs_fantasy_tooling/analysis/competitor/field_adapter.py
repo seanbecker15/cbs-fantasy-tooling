@@ -14,10 +14,15 @@ Usage:
 from typing import Dict
 from cbs_fantasy_tooling.analysis.data.loader import load_competitor_data
 from cbs_fantasy_tooling.analysis.data.enrichment import full_enrichment_pipeline
-from cbs_fantasy_tooling.analysis.competitor.competitor_classifier import build_player_profiles, analyze_league_composition
+from cbs_fantasy_tooling.analysis.competitor.competitor_classifier import (
+    build_player_profiles,
+    analyze_league_composition,
+)
 
 
-def get_actual_field_composition(data_dir: str = "../out", exclude_user: str = None) -> Dict[str, int]:
+def get_actual_field_composition(
+    data_dir: str = "../out", exclude_user: str = None
+) -> Dict[str, int]:
     """
     Get actual league field composition from historical data.
 
@@ -35,14 +40,14 @@ def get_actual_field_composition(data_dir: str = "../out", exclude_user: str = N
 
     # Exclude user if specified (since they're simulating against the field)
     if exclude_user:
-        enriched_picks = enriched_picks[enriched_picks['player_name'] != exclude_user]
+        enriched_picks = enriched_picks[enriched_picks["player_name"] != exclude_user]
 
     # Build player profiles and get composition
     profiles = build_player_profiles(enriched_picks)
     composition = analyze_league_composition(profiles)
 
     # Return in STRATEGY_MIX format
-    strategy_counts = composition['strategy_counts']
+    strategy_counts = composition["strategy_counts"]
 
     return {
         "Chalk-MaxPoints": strategy_counts.get("Chalk-MaxPoints", 0),
@@ -71,25 +76,26 @@ def get_field_statistics(data_dir: str = "out") -> Dict:
 
     # Calculate avg points per week
     import numpy as np
-    avg_points = np.mean([p['avg_points_per_week'] for p in profiles])
+
+    avg_points = np.mean([p["avg_points_per_week"] for p in profiles])
 
     # Get top 5 performers
-    top_performers = sorted(profiles, key=lambda p: p['avg_points_per_week'], reverse=True)[:5]
+    top_performers = sorted(profiles, key=lambda p: p["avg_points_per_week"], reverse=True)[:5]
 
     return {
-        'total_players': composition['total_players'],
-        'strategy_distribution': composition['strategy_counts'],
-        'avg_contrarian_rate': composition['avg_contrarian_rate'],
-        'avg_win_rate': composition['avg_win_rate'],
-        'avg_points_per_week': avg_points,
-        'top_performers': [
+        "total_players": composition["total_players"],
+        "strategy_distribution": composition["strategy_counts"],
+        "avg_contrarian_rate": composition["avg_contrarian_rate"],
+        "avg_win_rate": composition["avg_win_rate"],
+        "avg_points_per_week": avg_points,
+        "top_performers": [
             {
-                'name': p['player_name'],
-                'strategy': p['strategy'].value,
-                'avg_points': p['avg_points_per_week']
+                "name": p["player_name"],
+                "strategy": p["strategy"].value,
+                "avg_points": p["avg_points_per_week"],
             }
             for p in top_performers
-        ]
+        ],
     }
 
 
@@ -112,16 +118,15 @@ def compare_theoretical_vs_actual() -> Dict:
 
     # Calculate differences
     differences = {
-        strategy: actual[strategy] - theoretical[strategy]
-        for strategy in theoretical.keys()
+        strategy: actual[strategy] - theoretical[strategy] for strategy in theoretical.keys()
     }
 
     return {
-        'theoretical': theoretical,
-        'actual': actual,
-        'differences': differences,
-        'total_theoretical': sum(theoretical.values()),
-        'total_actual': sum(actual.values())
+        "theoretical": theoretical,
+        "actual": actual,
+        "differences": differences,
+        "total_theoretical": sum(theoretical.values()),
+        "total_actual": sum(actual.values()),
     }
 
 
@@ -145,10 +150,10 @@ if __name__ == "__main__":
 
     print("\nStrategy                  Theoretical  Actual  Difference")
     print("-" * 60)
-    for strategy in comparison['theoretical'].keys():
-        theo = comparison['theoretical'][strategy]
-        act = comparison['actual'][strategy]
-        diff = comparison['differences'][strategy]
+    for strategy in comparison["theoretical"].keys():
+        theo = comparison["theoretical"][strategy]
+        act = comparison["actual"][strategy]
+        diff = comparison["differences"][strategy]
         sign = "+" if diff > 0 else ""
         print(f"{strategy:<25} {theo:11d} {act:7d} {sign:>1}{diff:10d}")
 
@@ -164,8 +169,10 @@ if __name__ == "__main__":
     print("-" * 60)
     print(f"{'Player':<25} {'Strategy':<25} {'Avg Pts/Wk'}")
     print("-" * 60)
-    for performer in stats['top_performers']:
-        print(f"{performer['name']:<25} {performer['strategy']:<25} {performer['avg_points']:11.1f}")
+    for performer in stats["top_performers"]:
+        print(
+            f"{performer['name']:<25} {performer['strategy']:<25} {performer['avg_points']:11.1f}"
+        )
 
     print("\n5. INTEGRATION CODE FOR MAIN.PY")
     print("-" * 60)

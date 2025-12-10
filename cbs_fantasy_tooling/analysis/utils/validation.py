@@ -32,7 +32,7 @@ def validate_slate(mapping: list[dict], min_g=SLATE_MIN_GAMES, max_g=SLATE_MAX_G
 
         # Interactive confirmation
         response = input(f"\nContinue with only {n} games? (y/n): ").strip().lower()
-        if response != 'y':
+        if response != "y":
             print("Exiting. Please check game schedule and run simulator before games start.")
             sys.exit(1)
 

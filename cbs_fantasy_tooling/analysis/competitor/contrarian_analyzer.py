@@ -16,15 +16,15 @@ Usage:
     )
 """
 
-from typing import List, Dict, Tuple
+from typing import List, Dict
 from dataclasses import dataclass
 import pandas as pd
-import numpy as np
 
 
 @dataclass
 class ContrarianOpportunity:
     """Represents a contrarian opportunity"""
+
     game_id: str
     favorite: str
     underdog: str
@@ -36,9 +36,7 @@ class ContrarianOpportunity:
 
 
 def calculate_contrarian_value(
-    field_consensus: float,
-    underdog_prob: float,
-    avg_confidence: int = 8
+    field_consensus: float, underdog_prob: float, avg_confidence: int = 8
 ) -> float:
     """
     Calculate expected value gain from taking contrarian position.
@@ -90,7 +88,7 @@ def find_contrarian_opportunities_from_data(
     week: int,
     min_consensus: float = 0.75,
     min_upset_probability: float = 0.35,
-    max_opportunities: int = 3
+    max_opportunities: int = 3,
 ) -> List[ContrarianOpportunity]:
     """
     Find contrarian opportunities from historical data analysis.
@@ -106,29 +104,29 @@ def find_contrarian_opportunities_from_data(
     Returns:
         List of ContrarianOpportunity objects, sorted by expected value
     """
-    week_favorites = favorites_df[favorites_df['week'] == week]
-    week_picks = enriched_picks[enriched_picks['week'] == week]
+    week_favorites = favorites_df[favorites_df["week"] == week]
+    week_picks = enriched_picks[enriched_picks["week"] == week]
 
     opportunities = []
 
     for _, game in week_favorites.iterrows():
-        if game['favorite'] == 'TOSSUP':
+        if game["favorite"] == "TOSSUP":
             continue
 
-        field_consensus = game['favorite_percentage']
+        field_consensus = game["favorite_percentage"]
 
         # Only consider high-consensus games
         if field_consensus < min_consensus:
             continue
 
         # Calculate underdog win probability from historical data
-        underdog = game['underdog']
-        favorite = game['favorite']
+        underdog = game["underdog"]
+        favorite = game["favorite"]
 
         # Count actual outcomes (if available in historical data)
-        underdog_picks = week_picks[week_picks['team'] == underdog]
+        underdog_picks = week_picks[week_picks["team"] == underdog]
         if len(underdog_picks) > 0:
-            underdog_win_rate = underdog_picks['won'].mean()
+            underdog_win_rate = underdog_picks["won"].mean()
         else:
             # Estimate based on consensus (inverse relationship)
             underdog_win_rate = 1 - field_consensus
@@ -138,7 +136,7 @@ def find_contrarian_opportunities_from_data(
             continue
 
         # Calculate expected value
-        avg_conf = week_picks[week_picks['team'] == favorite]['confidence'].mean()
+        avg_conf = week_picks[week_picks["team"] == favorite]["confidence"].mean()
         if pd.isna(avg_conf):
             avg_conf = 8  # Default mid-range
 
@@ -150,16 +148,18 @@ def find_contrarian_opportunities_from_data(
         # Recommend if positive EV and acceptable risk
         recommended = (ev_gain > 0) and (risk in ["Low", "Medium"])
 
-        opportunities.append(ContrarianOpportunity(
-            game_id=game['game_id'],
-            favorite=favorite,
-            underdog=underdog,
-            field_consensus=field_consensus,
-            underdog_win_prob=underdog_win_rate,
-            expected_value_gain=ev_gain,
-            risk_level=risk,
-            recommended=recommended
-        ))
+        opportunities.append(
+            ContrarianOpportunity(
+                game_id=game["game_id"],
+                favorite=favorite,
+                underdog=underdog,
+                field_consensus=field_consensus,
+                underdog_win_prob=underdog_win_rate,
+                expected_value_gain=ev_gain,
+                risk_level=risk,
+                recommended=recommended,
+            )
+        )
 
     # Sort by expected value gain
     opportunities.sort(key=lambda x: x.expected_value_gain, reverse=True)
@@ -179,20 +179,20 @@ def analyze_contrarian_performance_history(enriched_picks: pd.DataFrame) -> Dict
         Dictionary with contrarian performance statistics
     """
     # Overall contrarian stats
-    contrarian_picks = enriched_picks[enriched_picks['is_contrarian']]
-    chalk_picks = enriched_picks[~enriched_picks['is_contrarian']]
+    contrarian_picks = enriched_picks[enriched_picks["is_contrarian"]]
+    chalk_picks = enriched_picks[~enriched_picks["is_contrarian"]]
 
     stats = {
-        'total_contrarian_picks': len(contrarian_picks),
-        'contrarian_win_rate': contrarian_picks['won'].mean(),
-        'contrarian_avg_points': contrarian_picks['points_earned'].mean(),
-        'chalk_win_rate': chalk_picks['won'].mean(),
-        'chalk_avg_points': chalk_picks['points_earned'].mean(),
+        "total_contrarian_picks": len(contrarian_picks),
+        "contrarian_win_rate": contrarian_picks["won"].mean(),
+        "contrarian_avg_points": contrarian_picks["points_earned"].mean(),
+        "chalk_win_rate": chalk_picks["won"].mean(),
+        "chalk_avg_points": chalk_picks["points_earned"].mean(),
     }
 
     # By field consensus level
     consensus_bins = [0.5, 0.75, 0.90, 1.0]
-    consensus_labels = ['50-75%', '75-90%', '90-100%']
+    consensus_labels = ["50-75%", "75-90%", "90-100%"]
 
     contrarian_by_consensus = []
     for i in range(len(consensus_bins) - 1):
@@ -201,18 +201,20 @@ def analyze_contrarian_performance_history(enriched_picks: pd.DataFrame) -> Dict
 
         # Filter contrarian picks in this consensus range
         in_range = contrarian_picks[
-            (contrarian_picks['field_percentage'] >= lower) &
-            (contrarian_picks['field_percentage'] < upper)
+            (contrarian_picks["field_percentage"] >= lower)
+            & (contrarian_picks["field_percentage"] < upper)
         ]
 
         if len(in_range) > 0:
-            contrarian_by_consensus.append({
-                'consensus_range': consensus_labels[i],
-                'count': len(in_range),
-                'win_rate': in_range['won'].mean(),
-                'avg_points': in_range['points_earned'].mean()
-            })
+            contrarian_by_consensus.append(
+                {
+                    "consensus_range": consensus_labels[i],
+                    "count": len(in_range),
+                    "win_rate": in_range["won"].mean(),
+                    "avg_points": in_range["points_earned"].mean(),
+                }
+            )
 
-    stats['by_consensus'] = contrarian_by_consensus
+    stats["by_consensus"] = contrarian_by_consensus
 
     return stats

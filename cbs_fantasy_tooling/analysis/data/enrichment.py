@@ -10,10 +10,9 @@ This is critical business logic - tested comprehensively.
 import json
 import glob
 import os
-from typing import Dict, List, Tuple
+from typing import Tuple
 
 import pandas as pd
-import numpy as np
 
 
 def load_game_results(data_dir: str = "out") -> pd.DataFrame:
@@ -36,29 +35,32 @@ def load_game_results(data_dir: str = "out") -> pd.DataFrame:
     all_games = []
 
     for filepath in files:
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             data = json.load(f)
 
-        for game in data['games']:
+        for game in data["games"]:
             # winning_team and losing_team keys may not always exist; check winner and loser too
-            winning_team = game.get('winning_team') or game.get('winner')
-            losing_team = game.get('losing_team') or game.get('loser')
-            all_games.append({
-                'week': game['week'],
-                'away_team': game['away_team'],
-                'home_team': game['home_team'],
-                'away_score': game['away_score'],
-                'home_score': game['home_score'],
-                'winning_team': winning_team,
-                'losing_team': losing_team,
-                'game_id': game['game_id']
-            })
+            winning_team = game.get("winning_team") or game.get("winner")
+            losing_team = game.get("losing_team") or game.get("loser")
+            all_games.append(
+                {
+                    "week": game["week"],
+                    "away_team": game["away_team"],
+                    "home_team": game["home_team"],
+                    "away_score": game["away_score"],
+                    "home_score": game["home_score"],
+                    "winning_team": winning_team,
+                    "losing_team": losing_team,
+                    "game_id": game["game_id"],
+                }
+            )
 
     return pd.DataFrame(all_games)
 
 
-def enrich_picks_with_outcomes(picks_df: pd.DataFrame,
-                                game_results_df: pd.DataFrame) -> pd.DataFrame:
+def enrich_picks_with_outcomes(
+    picks_df: pd.DataFrame, game_results_df: pd.DataFrame
+) -> pd.DataFrame:
     """
     Enrich picks DataFrame with game outcome data (won/lost).
 
@@ -78,24 +80,21 @@ def enrich_picks_with_outcomes(picks_df: pd.DataFrame,
     enriched_picks = picks_df.copy()
 
     # Initialize new columns
-    enriched_picks['won'] = False
-    enriched_picks['opponent'] = None
-    enriched_picks['home_away'] = None
-    enriched_picks['final_score'] = None
+    enriched_picks["won"] = False
+    enriched_picks["opponent"] = None
+    enriched_picks["home_away"] = None
+    enriched_picks["final_score"] = None
 
     # For each week, match picks to game results
-    for week in enriched_picks['week'].unique():
-        week_picks = enriched_picks['week'] == week
-        week_games = game_results_df[game_results_df['week'] == week]
+    for week in enriched_picks["week"].unique():
+        week_picks = enriched_picks["week"] == week
+        week_games = game_results_df[game_results_df["week"] == week]
 
         for idx in enriched_picks[week_picks].index:
-            team = enriched_picks.loc[idx, 'team']
+            team = enriched_picks.loc[idx, "team"]
 
             # Find this team's game
-            game = week_games[
-                (week_games['home_team'] == team) |
-                (week_games['away_team'] == team)
-            ]
+            game = week_games[(week_games["home_team"] == team) | (week_games["away_team"] == team)]
 
             if len(game) == 0:
                 # Team didn't play this week (bye week or data mismatch)
@@ -104,33 +103,32 @@ def enrich_picks_with_outcomes(picks_df: pd.DataFrame,
             game = game.iloc[0]
 
             # Determine if pick won
-            won = (game['winning_team'] == team)
-            enriched_picks.loc[idx, 'won'] = won
+            won = game["winning_team"] == team
+            enriched_picks.loc[idx, "won"] = won
 
             # Determine opponent and home/away
-            if game['home_team'] == team:
-                enriched_picks.loc[idx, 'opponent'] = game['away_team']
-                enriched_picks.loc[idx, 'home_away'] = 'home'
+            if game["home_team"] == team:
+                enriched_picks.loc[idx, "opponent"] = game["away_team"]
+                enriched_picks.loc[idx, "home_away"] = "home"
                 score = f"{game['home_score']}-{game['away_score']}"
             else:
-                enriched_picks.loc[idx, 'opponent'] = game['home_team']
-                enriched_picks.loc[idx, 'home_away'] = 'away'
+                enriched_picks.loc[idx, "opponent"] = game["home_team"]
+                enriched_picks.loc[idx, "home_away"] = "away"
                 score = f"{game['away_score']}-{game['home_score']}"
 
-            enriched_picks.loc[idx, 'final_score'] = score
+            enriched_picks.loc[idx, "final_score"] = score
 
     # Calculate points earned (confidence if won, 0 if lost)
-    enriched_picks['points_earned'] = enriched_picks.apply(
-        lambda row: row['confidence'] if row['won'] else 0,
-        axis=1
+    enriched_picks["points_earned"] = enriched_picks.apply(
+        lambda row: row["confidence"] if row["won"] else 0, axis=1
     )
 
     return enriched_picks
 
 
-def calculate_field_favorites(picks_df: pd.DataFrame,
-                                game_results_df: pd.DataFrame,
-                                threshold: float = 0.50) -> pd.DataFrame:
+def calculate_field_favorites(
+    picks_df: pd.DataFrame, game_results_df: pd.DataFrame, threshold: float = 0.50
+) -> pd.DataFrame:
     """
     Determine which team was the "favorite" based on field consensus.
 
@@ -145,17 +143,17 @@ def calculate_field_favorites(picks_df: pd.DataFrame,
     """
     favorites = []
 
-    for week in picks_df['week'].unique():
-        week_picks = picks_df[picks_df['week'] == week]
-        week_games = game_results_df[game_results_df['week'] == week]
+    for week in picks_df["week"].unique():
+        week_picks = picks_df[picks_df["week"] == week]
+        week_games = game_results_df[game_results_df["week"] == week]
 
         for _, game in week_games.iterrows():
-            home_team = game['home_team']
-            away_team = game['away_team']
+            home_team = game["home_team"]
+            away_team = game["away_team"]
 
             # Count picks for each team
-            home_picks = len(week_picks[week_picks['team'] == home_team])
-            away_picks = len(week_picks[week_picks['team'] == away_team])
+            home_picks = len(week_picks[week_picks["team"] == home_team])
+            away_picks = len(week_picks[week_picks["team"] == away_team])
             total_picks = home_picks + away_picks
 
             if total_picks == 0:
@@ -176,27 +174,28 @@ def calculate_field_favorites(picks_df: pd.DataFrame,
                 favorite_pct = away_percentage
             else:
                 # Toss-up game
-                favorite = 'TOSSUP'
-                underdog = 'TOSSUP'
+                favorite = "TOSSUP"
+                underdog = "TOSSUP"
                 favorite_pct = max(home_percentage, away_percentage)
 
-            favorites.append({
-                'week': week,
-                'game_id': game['game_id'],
-                'home_team': home_team,
-                'away_team': away_team,
-                'favorite': favorite,
-                'underdog': underdog,
-                'favorite_percentage': favorite_pct,
-                'home_pick_percentage': home_percentage,
-                'away_pick_percentage': away_percentage
-            })
+            favorites.append(
+                {
+                    "week": week,
+                    "game_id": game["game_id"],
+                    "home_team": home_team,
+                    "away_team": away_team,
+                    "favorite": favorite,
+                    "underdog": underdog,
+                    "favorite_percentage": favorite_pct,
+                    "home_pick_percentage": home_percentage,
+                    "away_pick_percentage": away_percentage,
+                }
+            )
 
     return pd.DataFrame(favorites)
 
 
-def mark_contrarian_picks(picks_df: pd.DataFrame,
-                           favorites_df: pd.DataFrame) -> pd.DataFrame:
+def mark_contrarian_picks(picks_df: pd.DataFrame, favorites_df: pd.DataFrame) -> pd.DataFrame:
     """
     Mark which picks were contrarian (picked the underdog).
 
@@ -210,18 +209,17 @@ def mark_contrarian_picks(picks_df: pd.DataFrame,
         - field_percentage: float (% of field that picked same team)
     """
     enriched = picks_df.copy()
-    enriched['is_contrarian'] = False
-    enriched['field_percentage'] = None
+    enriched["is_contrarian"] = False
+    enriched["field_percentage"] = None
 
     for idx in enriched.index:
-        week = enriched.loc[idx, 'week']
-        team = enriched.loc[idx, 'team']
+        week = enriched.loc[idx, "week"]
+        team = enriched.loc[idx, "team"]
 
         # Find the game this pick belongs to
         game_info = favorites_df[
-            (favorites_df['week'] == week) &
-            ((favorites_df['home_team'] == team) |
-             (favorites_df['away_team'] == team))
+            (favorites_df["week"] == week)
+            & ((favorites_df["home_team"] == team) | (favorites_df["away_team"] == team))
         ]
 
         if len(game_info) == 0:
@@ -230,22 +228,23 @@ def mark_contrarian_picks(picks_df: pd.DataFrame,
         game_info = game_info.iloc[0]
 
         # Check if this was a contrarian pick
-        is_contrarian = (team == game_info['underdog'])
-        enriched.loc[idx, 'is_contrarian'] = is_contrarian
+        is_contrarian = team == game_info["underdog"]
+        enriched.loc[idx, "is_contrarian"] = is_contrarian
 
         # Get field percentage for this team
-        if team == game_info['home_team']:
-            field_pct = game_info['home_pick_percentage']
+        if team == game_info["home_team"]:
+            field_pct = game_info["home_pick_percentage"]
         else:
-            field_pct = game_info['away_pick_percentage']
+            field_pct = game_info["away_pick_percentage"]
 
-        enriched.loc[idx, 'field_percentage'] = field_pct
+        enriched.loc[idx, "field_percentage"] = field_pct
 
     return enriched
 
 
-def full_enrichment_pipeline(picks_df: pd.DataFrame,
-                               data_dir: str = "out") -> Tuple[pd.DataFrame, pd.DataFrame]:
+def full_enrichment_pipeline(
+    picks_df: pd.DataFrame, data_dir: str = "out"
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Complete enrichment pipeline.
 
@@ -263,7 +262,7 @@ def full_enrichment_pipeline(picks_df: pd.DataFrame,
     print("\nEnriching picks with game outcomes...")
     enriched_picks = enrich_picks_with_outcomes(picks_df, game_results)
     total_picks = len(enriched_picks)
-    wins = enriched_picks['won'].sum()
+    wins = enriched_picks["won"].sum()
     win_rate = wins / total_picks
     print(f"  Total picks: {total_picks}")
     print(f"  Winning picks: {wins} ({win_rate:.1%})")
@@ -274,7 +273,7 @@ def full_enrichment_pipeline(picks_df: pd.DataFrame,
 
     print("\nMarking contrarian picks...")
     enriched_picks = mark_contrarian_picks(enriched_picks, favorites)
-    contrarian_picks = enriched_picks['is_contrarian'].sum()
+    contrarian_picks = enriched_picks["is_contrarian"].sum()
     contrarian_rate = contrarian_picks / total_picks
     print(f"  Contrarian picks: {contrarian_picks} ({contrarian_rate:.1%})")
 

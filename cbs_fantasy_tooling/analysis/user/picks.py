@@ -33,17 +33,38 @@ def normalize_team_name(user_team: str, available_teams: list[str]) -> str:
 
     # Common abbreviations mapping
     abbrev_map = {
-        'bal': 'baltimore ravens', 'buf': 'buffalo bills', 'mia': 'miami dolphins',
-        'ne': 'new england patriots', 'nyj': 'new york jets', 'pit': 'pittsburgh steelers',
-        'cle': 'cleveland browns', 'cin': 'cincinnati bengals', 'hou': 'houston texans',
-        'ind': 'indianapolis colts', 'jax': 'jacksonville jaguars', 'ten': 'tennessee titans',
-        'den': 'denver broncos', 'kc': 'kansas city chiefs', 'lv': 'las vegas raiders',
-        'lac': 'los angeles chargers', 'dal': 'dallas cowboys', 'nyg': 'new york giants',
-        'phi': 'philadelphia eagles', 'was': 'washington commanders', 'chi': 'chicago bears',
-        'det': 'detroit lions', 'gb': 'green bay packers', 'min': 'minnesota vikings',
-        'atl': 'atlanta falcons', 'car': 'carolina panthers', 'no': 'new orleans saints',
-        'tb': 'tampa bay buccaneers', 'ari': 'arizona cardinals', 'lar': 'los angeles rams',
-        'sea': 'seattle seahawks', 'sf': 'san francisco 49ers'
+        "bal": "baltimore ravens",
+        "buf": "buffalo bills",
+        "mia": "miami dolphins",
+        "ne": "new england patriots",
+        "nyj": "new york jets",
+        "pit": "pittsburgh steelers",
+        "cle": "cleveland browns",
+        "cin": "cincinnati bengals",
+        "hou": "houston texans",
+        "ind": "indianapolis colts",
+        "jax": "jacksonville jaguars",
+        "ten": "tennessee titans",
+        "den": "denver broncos",
+        "kc": "kansas city chiefs",
+        "lv": "las vegas raiders",
+        "lac": "los angeles chargers",
+        "dal": "dallas cowboys",
+        "nyg": "new york giants",
+        "phi": "philadelphia eagles",
+        "was": "washington commanders",
+        "chi": "chicago bears",
+        "det": "detroit lions",
+        "gb": "green bay packers",
+        "min": "minnesota vikings",
+        "atl": "atlanta falcons",
+        "car": "carolina panthers",
+        "no": "new orleans saints",
+        "tb": "tampa bay buccaneers",
+        "ari": "arizona cardinals",
+        "lar": "los angeles rams",
+        "sea": "seattle seahawks",
+        "sf": "san francisco 49ers",
     }
 
     user_lower = user_team.lower()
@@ -62,7 +83,9 @@ def normalize_team_name(user_team: str, available_teams: list[str]) -> str:
     raise ValueError(f"Could not match team '{user_team}' to available teams: {available_teams}")
 
 
-def validate_user_picks(user_picks: list[str], week_mapping: list[dict]) -> tuple[list[str], list[str]]:
+def validate_user_picks(
+    user_picks: list[str], week_mapping: list[dict]
+) -> tuple[list[str], list[str]]:
     """
     Validate user picks against available teams for the current week.
 
@@ -102,7 +125,9 @@ def validate_user_picks(user_picks: list[str], week_mapping: list[dict]) -> tupl
     return normalized_picks, errors
 
 
-def parse_user_picks(user_input: str | list, week_mapping: list[dict]) -> tuple[np.ndarray, np.ndarray]:
+def parse_user_picks(
+    user_input: str | list, week_mapping: list[dict]
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Parse user picks from various input formats into picks and confidence arrays.
 
@@ -120,7 +145,7 @@ def parse_user_picks(user_input: str | list, week_mapping: list[dict]) -> tuple[
     """
     # Handle string input
     if isinstance(user_input, str):
-        user_picks = [team.strip() for team in user_input.split(',')]
+        user_picks = [team.strip() for team in user_input.split(",")]
     else:
         user_picks = user_input
 
@@ -179,6 +204,7 @@ def create_user_strategy(user_picks: np.ndarray, user_confidence: np.ndarray):
     Returns:
         Strategy function compatible with simulator
     """
+
     def user_strategy_fn(_):
         # Return the user's fixed picks and confidence, ignoring probabilities
         return user_picks.copy(), user_confidence.copy()

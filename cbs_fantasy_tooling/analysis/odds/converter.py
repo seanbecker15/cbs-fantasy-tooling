@@ -43,8 +43,9 @@ def devig_two_way(pA: float | None, pB: float | None) -> tuple[float | None, flo
     return pA / s, pB / s
 
 
-def consensus_moneyline_probs(events: list[dict], sharp_books: tuple[str, ...],
-                              sharp_weight: int) -> list[dict]:
+def consensus_moneyline_probs(
+    events: list[dict], sharp_books: tuple[str, ...], sharp_weight: int
+) -> list[dict]:
     """
     Build consensus de-vig probabilities per game from multiple sportsbooks.
 
@@ -96,14 +97,16 @@ def consensus_moneyline_probs(events: list[dict], sharp_books: tuple[str, ...],
         if not p_home_list or not p_away_list:
             continue
 
-        rows.append({
-            "id": eid,
-            "home_team": home,
-            "away_team": away,
-            "p_home": median(p_home_list),
-            "p_away": median(p_away_list),
-            "commence_time": commence,
-        })
+        rows.append(
+            {
+                "id": eid,
+                "home_team": home,
+                "away_team": away,
+                "p_home": median(p_home_list),
+                "p_away": median(p_away_list),
+                "commence_time": commence,
+            }
+        )
     return rows
 
 
@@ -126,13 +129,15 @@ def rows_to_game_probs(rows: list[dict]) -> tuple[np.ndarray, list[dict]]:
         else:
             fav_prob, fav_team, dog_team = g["p_away"], g["away_team"], g["home_team"]
         probs.append(fav_prob)
-        mapping.append({
-            "id": g["id"],
-            "home_team": g["home_team"],
-            "away_team": g["away_team"],
-            "favorite": fav_team,
-            "dog": dog_team,
-            "p_fav": float(fav_prob),
-            "commence_time": g.get("commence_time"),
-        })
+        mapping.append(
+            {
+                "id": g["id"],
+                "home_team": g["home_team"],
+                "away_team": g["away_team"],
+                "favorite": fav_team,
+                "dog": dog_team,
+                "p_fav": float(fav_prob),
+                "commence_time": g.get("commence_time"),
+            }
+        )
     return np.array(probs, dtype=float), mapping

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class PickemResult:
     """Represents a single pick'em result entry."""
@@ -17,8 +18,7 @@ class PickemResult:
         self.picks = []
 
     def __str__(self):
-        out = "PickemResult: { name: " + self.name + \
-            ", results: [ " + self.csv() + " ] }"
+        out = "PickemResult: { name: " + self.name + ", results: [ " + self.csv() + " ] }"
         return out
 
     def csv(self):

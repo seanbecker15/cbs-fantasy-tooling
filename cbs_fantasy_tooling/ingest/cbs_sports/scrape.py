@@ -17,28 +17,31 @@ from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.database import DatabasePublisher
 from cbs_fantasy_tooling.storage.providers.database import compare_results
 
-login_page_url = 'https://www.cbssports.com/login?masterProductId=41010&product_abbrev=opm&show_opts=1&xurl=https%3A%2F%2Fpicks.cbssports.com%2Ffootball%2Fpickem%2Fpools%2Fizxw65dcmfwgyudjmnvwk3knmfxgcz3fojig633mhiytgobtgq2deoi%253D%2Fstandings%2Fweekly%3Fdevice%3Ddesktop%26device%3Ddesktop'
+login_page_url = "https://www.cbssports.com/login?masterProductId=41010&product_abbrev=opm&show_opts=1&xurl=https%3A%2F%2Fpicks.cbssports.com%2Ffootball%2Fpickem%2Fpools%2Fizxw65dcmfwgyudjmnvwk3knmfxgcz3fojig633mhiytgobtgq2deoi%253D%2Fstandings%2Fweekly%3Fdevice%3Ddesktop%26device%3Ddesktop"
 
 
 def navigate_login(driver, max_wait_time, email: str, password: str) -> int:
     driver.get(login_page_url)
-    if email == None or len(email) == 0:
+    if email is None or len(email) == 0:
         print("Email not found. Make sure .env file is configured correctly.")
         return 1
-    if password == None or len(password) == 0:
+    if password is None or len(password) == 0:
         print("Password not found. Make sure .env file is configured correctly.")
         return 1
     try:
         userid_el = WebDriverWait(driver, max_wait_time).until(
-            EC.presence_of_element_located((By.NAME, 'email')))
+            EC.presence_of_element_located((By.NAME, "email"))
+        )
         userid_el.send_keys(email)
         password_el = WebDriverWait(driver, max_wait_time).until(
-            EC.presence_of_element_located((By.NAME, 'password')))
+            EC.presence_of_element_located((By.NAME, "password"))
+        )
         password_el.send_keys(password)
         button_el = WebDriverWait(driver, max_wait_time).until(
-            EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Continue')]")))
+            EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Continue')]"))
+        )
 
-        sleep(5)        
+        sleep(5)
         button_el.click()
     except TimeoutException:
         print("It took too much time to load specified elements.")
@@ -48,20 +51,23 @@ def navigate_standings(driver, max_wait_time, curr_week, target_week) -> any:
     # Search for div with text "Week X" and click on it to open menu
     print(f"Looking for div with text 'Week {curr_week}'")
     week_div = WebDriverWait(driver, max_wait_time).until(
-        EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), 'Week {curr_week}')]")))
+        EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), 'Week {curr_week}')]"))
+    )
     week_div.click()
 
     # Search for li with text "Week Y" and click on it to navigate to the target week
     print(f"Looking for li with text 'Week {target_week}'")
     target_week_li = WebDriverWait(driver, max_wait_time).until(
-        EC.presence_of_element_located((By.XPATH, f"//li[contains(text(), 'Week {target_week}')]")))
+        EC.presence_of_element_located((By.XPATH, f"//li[contains(text(), 'Week {target_week}')]"))
+    )
     target_week_li.click()
 
 
 def scrape_standings(driver, max_wait_time, debug) -> list[PickemResult]:
     # Search for a table with aria-label "Weekly Standings" and get all rows
     table = WebDriverWait(driver, max_wait_time).until(
-        EC.presence_of_element_located((By.XPATH, "//table[@aria-label='Weekly Standings']")))
+        EC.presence_of_element_located((By.XPATH, "//table[@aria-label='Weekly Standings']"))
+    )
     table_body = table.find_element(By.TAG_NAME, "tbody")
     rows = table_body.find_elements(By.TAG_NAME, "tr")
 
@@ -90,7 +96,7 @@ def scrape_standings(driver, max_wait_time, debug) -> list[PickemResult]:
                 wins += 1
             elif cell_type == "loss":
                 losses += 1
-            
+
             cell_text = extract_cell_text(cell)
             pick_details = parse_pick(cell_text)
             if pick_details:
@@ -102,8 +108,7 @@ def scrape_standings(driver, max_wait_time, debug) -> list[PickemResult]:
         row_obj.picks = picks
         parsed_rows.append(row_obj)
         if debug:
-            print(
-                f"Player: {player_name}, Points: {player_points}, Wins: {wins}, Losses: {losses}")
+            print(f"Player: {player_name}, Points: {player_points}, Wins: {wins}, Losses: {losses}")
 
     return parsed_rows
 
@@ -122,10 +127,11 @@ def check_cell_type(cell: WebElement) -> str:
                 return "win"
             elif path_d == icon_x_svg_path:
                 return "loss"
-    except:
+    except Exception:
         pass
 
     return "unknown"
+
 
 def extract_cell_text(cell: WebElement) -> str:
     # Get cell text (e.g. "SEA (12)")
@@ -133,10 +139,11 @@ def extract_cell_text(cell: WebElement) -> str:
         spans = cell.find_elements(By.TAG_NAME, "span")
         if spans and len(spans) == 2:
             return spans[0].text + " " + spans[1].text
-    except:
+    except Exception:
         pass
 
     return ""
+
 
 def parse_pick(pick: str) -> dict:
     # Example pick: "SEA (12)"
@@ -145,10 +152,8 @@ def parse_pick(pick: str) -> dict:
         return {}
     team = parts[0]
     points = parts[1].replace("(", "").replace(")", "")
-    return {
-        "team": team,
-        "points": points
-    }
+    return {"team": team, "points": points}
+
 
 def print_csv(results):
     csv = "Name,Points,Wins,Losses\n"
@@ -162,8 +167,7 @@ def print_most_wins(results):
     for row in results:
         if row.results[1] > max_wins:
             max_wins = row.results[1]
-    players_with_max_wins = [
-        row.name for row in results if row.results[1] == max_wins]
+    players_with_max_wins = [row.name for row in results if row.results[1] == max_wins]
     print(f"Most wins for the week: {max_wins}")
     print(f"Players with the most wins: {', '.join(players_with_max_wins)}")
 
@@ -174,11 +178,9 @@ def print_most_points(results):
         curr_row_points = int(row.results[0])
         if curr_row_points > max_points:
             max_points = curr_row_points
-    players_with_max_points = [
-        row.name for row in results if int(row.results[0]) == max_points]
+    players_with_max_points = [row.name for row in results if int(row.results[0]) == max_points]
     print(f"Most points for the week: {max_points}")
-    print(
-        f"Players with the most points: {', '.join(players_with_max_points)}")
+    print(f"Players with the most points: {', '.join(players_with_max_points)}")
 
 
 @dataclass
@@ -187,6 +189,7 @@ class PickemIngestParams:
     target_week: int
     poll_interval: int | None = None
 
+
 def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher]):
     try:
         pickem_result_items = run_scraper(params, publishers)
@@ -194,6 +197,7 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
         publish_results(pickem_results, publishers)
     except Exception as e:
         print(f"Error occurred during scraping or publishing: {e}")
+
 
 def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list[PickemResult]:
     email = os.getenv("EMAIL")
@@ -207,34 +211,32 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
     navigate_login(driver, max_wait_time, email, password)
     wait_for_user_input(30)
 
-
     i = params.curr_week
     succeeded = False
 
     # Sometimes on first load the page doesn't finish loading
     driver.refresh()
-    
+
     while i >= params.target_week and not succeeded:
         try:
             print(f"Looking for dropdown with text 'Week {i}'")
-            navigate_standings(
-                driver, max_wait_time, i, params.target_week)
+            navigate_standings(driver, max_wait_time, i, params.target_week)
             sleep(2)
             succeeded = True
             break
         except TimeoutException:
-            print(
-                f"Could not find dropdown with text 'Week {i}'.")
+            print(f"Could not find dropdown with text 'Week {i}'.")
             i -= 1
 
     if not succeeded:
         raise Exception(
-            f"Could not find week dropdown. Searched {params.curr_week}..{params.target_week}.")
+            f"Could not find week dropdown. Searched {params.curr_week}..{params.target_week}."
+        )
 
     sleep(5)
 
     print(f"\n✓ Successfully navigated to Week {params.target_week}")
-    
+
     poll_interval = params.poll_interval
 
     try:
@@ -246,7 +248,7 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
             if not results or len(results) == 0:
                 raise Exception("No results found.")
             return results
-        
+
         print("\nStarting realtime polling...")
         print(f"Poll interval: {poll_interval}s (refreshing page between polls)")
         print("=" * 60)
@@ -272,7 +274,9 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
                         return
                     sleep(1)
 
-            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Poll #{poll_count} - Scraping data...")
+            print(
+                f"\n[{datetime.now().strftime('%H:%M:%S')}] Poll #{poll_count} - Scraping data..."
+            )
 
             try:
                 # Scrape current data
@@ -289,11 +293,11 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
                     if previous_results is None:
                         print("  First poll - saving baseline data")
                         on_update(params, publishers, current_results)
-                    elif comparison['changed']:
+                    elif comparison["changed"]:
                         print(f"  ⚡ CHANGE DETECTED - {comparison['summary']}")
-                        for change in comparison['changes'][:5]:  # Show first 5 changes
+                        for change in comparison["changes"][:5]:  # Show first 5 changes
                             print(f"    • {change}")
-                        if len(comparison['changes']) > 5:
+                        if len(comparison["changes"]) > 5:
                             print(f"    ... and {len(comparison['changes']) - 5} more changes")
                         on_update(params, publishers, current_results)
                     else:
@@ -304,6 +308,7 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
             except Exception as e:
                 print(f"⚠ Error during scraping: {e}")
                 import traceback
+
                 traceback.print_exc()
 
             # Wait after scraping before next poll (half the poll interval)
@@ -320,6 +325,7 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
     except Exception as e:
         print(f"\n⚠ Error: {e}")
         import traceback
+
         traceback.print_exc()
     finally:
         print("\nClosing browser...")
@@ -339,7 +345,7 @@ def on_update(params: PickemIngestParams, publishers: list[Publisher], results: 
         if not db_publisher:
             print("No database publisher configured, skipping publish step")
             return
-        
+
         # Publish to database
         print("\nPublishing to database...")
         success = db_publisher.publish_pickem_results(results_data) if db_publisher else False
@@ -350,7 +356,9 @@ def on_update(params: PickemIngestParams, publishers: list[Publisher], results: 
             points_data = results_data.get_max_points_data()
 
             print(f"\n{'=' * 60}")
-            print(f"Week {params.target_week} Summary (as of {results_data.timestamp.strftime('%H:%M:%S')})")
+            print(
+                f"Week {params.target_week} Summary (as of {results_data.timestamp.strftime('%H:%M:%S')})"
+            )
             print(f"{'=' * 60}")
             print(f"Most wins: {wins_data['max_wins']} - {wins_data['players']}")
             print(f"Most points: {points_data['max_points']} - {points_data['players']}")
@@ -361,6 +369,7 @@ def on_update(params: PickemIngestParams, publishers: list[Publisher], results: 
     except Exception as e:
         print(f"⚠ Error in update callback: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -368,7 +377,7 @@ def publish_results(results: PickemResults, publishers: list[Publisher]):
     """Publish results using all configured publishers"""
     success_count = 0
     errors = []
-    
+
     for name, publisher in publishers:
         print(f"\nPublishing via {name}...")
         try:
@@ -381,7 +390,7 @@ def publish_results(results: PickemResults, publishers: list[Publisher]):
         except Exception as e:
             print(f"✗ {name} publisher error: {e}")
             errors.append(name)
-    
+
     print(f"\nPublication summary: {success_count}/{len(publishers)} publishers succeeded")
     if errors:
         print(f"Failed publishers: {', '.join(errors)}")
@@ -405,7 +414,7 @@ def wait_for_exit_signal() -> bool:
 def wait_for_user_input(timeout_seconds=30):
     """Wait for user input with a timeout. Returns True if user pressed Enter, False if timeout."""
     print(f"Press Enter to continue (will auto-continue in {timeout_seconds} seconds)...")
-    
+
     # Use select to check if input is available
     if sys.stdin in select.select([sys.stdin], [], [], timeout_seconds)[0]:
         input()  # Consume the input

@@ -19,38 +19,48 @@ BASE_URL = "http://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard
 SEASON_TYPE_REGULAR = 2
 
 TEAM_MAPPING = {
-    'ARI': 'ARI', 'ARZ': 'ARI',
-    'ATL': 'ATL',
-    'BAL': 'BAL',
-    'BUF': 'BUF',
-    'CAR': 'CAR',
-    'CHI': 'CHI',
-    'CIN': 'CIN',
-    'CLE': 'CLE',
-    'DAL': 'DAL',
-    'DEN': 'DEN',
-    'DET': 'DET',
-    'GB': 'GB', 'GNB': 'GB',
-    'HOU': 'HOU',
-    'IND': 'IND',
-    'JAC': 'JAC', 'JAX': 'JAC',
-    'KC': 'KC', 'KAN': 'KC',
-    'LAC': 'LAC',
-    'LAR': 'LAR',
-    'LV': 'LV', 'LVR': 'LV',
-    'MIA': 'MIA',
-    'MIN': 'MIN',
-    'NE': 'NE', 'NEP': 'NE',
-    'NO': 'NO', 'NOR': 'NO',
-    'NYG': 'NYG',
-    'NYJ': 'NYJ',
-    'PHI': 'PHI',
-    'PIT': 'PIT',
-    'SEA': 'SEA',
-    'SF': 'SF', 'SFO': 'SF',
-    'TB': 'TB', 'TAM': 'TB',
-    'TEN': 'TEN',
-    'WAS': 'WAS', 'WSH': 'WAS'
+    "ARI": "ARI",
+    "ARZ": "ARI",
+    "ATL": "ATL",
+    "BAL": "BAL",
+    "BUF": "BUF",
+    "CAR": "CAR",
+    "CHI": "CHI",
+    "CIN": "CIN",
+    "CLE": "CLE",
+    "DAL": "DAL",
+    "DEN": "DEN",
+    "DET": "DET",
+    "GB": "GB",
+    "GNB": "GB",
+    "HOU": "HOU",
+    "IND": "IND",
+    "JAC": "JAC",
+    "JAX": "JAC",
+    "KC": "KC",
+    "KAN": "KC",
+    "LAC": "LAC",
+    "LAR": "LAR",
+    "LV": "LV",
+    "LVR": "LV",
+    "MIA": "MIA",
+    "MIN": "MIN",
+    "NE": "NE",
+    "NEP": "NE",
+    "NO": "NO",
+    "NOR": "NO",
+    "NYG": "NYG",
+    "NYJ": "NYJ",
+    "PHI": "PHI",
+    "PIT": "PIT",
+    "SEA": "SEA",
+    "SF": "SF",
+    "SFO": "SF",
+    "TB": "TB",
+    "TAM": "TB",
+    "TEN": "TEN",
+    "WAS": "WAS",
+    "WSH": "WAS",
 }
 
 
@@ -60,11 +70,13 @@ class ESPNGameOutcomeApi:
     def __init__(self, season: int, session: Optional[requests.Session] = None):
         self.season = season
         self.session = session or requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; GameStatusFetcher/1.0)'
-        })
+        self.session.headers.update(
+            {"User-Agent": "Mozilla/5.0 (compatible; GameStatusFetcher/1.0)"}
+        )
 
-    def fetch_game_results(self, week: int, season: Optional[int] = None, max_retries: int = 3) -> List[GameResult]:
+    def fetch_game_results(
+        self, week: int, season: Optional[int] = None, max_retries: int = 3
+    ) -> List[GameResult]:
         """
         Fetch game status data for a specific week.
 
@@ -81,10 +93,10 @@ class ESPNGameOutcomeApi:
 
         target_season = season or self.season
         params = {
-            'seasontype': SEASON_TYPE_REGULAR,
-            'week': week,
-            'year': target_season,
-            'limit': 100
+            "seasontype": SEASON_TYPE_REGULAR,
+            "week": week,
+            "year": target_season,
+            "limit": 100,
         }
 
         for attempt in range(max_retries):
@@ -95,37 +107,39 @@ class ESPNGameOutcomeApi:
                 return self._parse_response(data, week, target_season)
             except requests.RequestException as exc:
                 if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt
-                    print(f"Retrying ESPN fetch ({attempt + 1}/{max_retries}) after {wait_time}s: {exc}")
+                    wait_time = 2**attempt
+                    print(
+                        f"Retrying ESPN fetch ({attempt + 1}/{max_retries}) after {wait_time}s: {exc}"
+                    )
                     time.sleep(wait_time)
                 else:
                     print(f"Failed to fetch ESPN data after {max_retries} attempts: {exc}")
                     return []
 
         return []
-    
+
     @staticmethod
     def _normalize_team_abbrev(espn_abbrev: str) -> str:
         """Normalize ESPN team abbreviation to standard form."""
         return TEAM_MAPPING.get(espn_abbrev.upper(), espn_abbrev.upper())
-    
+
     def _parse_response(self, data: Dict[str, Any], week: int, season: int) -> List[GameResult]:
         """Convert ESPN JSON payload into GameStatusRecord objects."""
         records: List[GameResult] = []
 
-        for event in data.get('events', []):
+        for event in data.get("events", []):
             try:
                 record = self._parse_event(event, week, season)
                 if record:
                     records.append(record)
             except (KeyError, ValueError, TypeError) as exc:
-                event_id = event.get('id')
+                event_id = event.get("id")
                 print(f"Warning: could not parse event {event_id}: {exc}")
 
         records.sort(
             key=lambda record: (
-                record.game_time.isoformat() if record.game_time else '',
-                record.game_id
+                record.game_time.isoformat() if record.game_time else "",
+                record.game_id,
             )
         )
 
@@ -133,12 +147,12 @@ class ESPNGameOutcomeApi:
 
     def _parse_event(self, event: Dict[str, Any], week: int, season: int) -> Optional[GameResult]:
         """Parse individual event into a GameStatusRecord."""
-        competitions = event.get('competitions', [])
+        competitions = event.get("competitions", [])
         if not competitions:
             return None
 
         competition = competitions[0]
-        competitors = competition.get('competitors', [])
+        competitors = competition.get("competitors", [])
         if len(competitors) != 2:
             return None
 
@@ -147,14 +161,11 @@ class ESPNGameOutcomeApi:
 
         for competitor in competitors:
             team_abbrev = self._normalize_team_abbrev(
-                competitor.get('team', {}).get('abbreviation', '')
+                competitor.get("team", {}).get("abbreviation", "")
             )
-            score_value = self._parse_score(competitor.get('score'))
-            entry = {
-                'team': team_abbrev,
-                'score': score_value
-            }
-            if competitor.get('homeAway') == 'home':
+            score_value = self._parse_score(competitor.get("score"))
+            entry = {"team": team_abbrev, "score": score_value}
+            if competitor.get("homeAway") == "home":
                 home_team = entry
             else:
                 away_team = entry
@@ -162,27 +173,39 @@ class ESPNGameOutcomeApi:
         if not home_team or not away_team:
             return None
 
-        status_info = competition.get('status', {})
-        status_type = status_info.get('type', {})
-        is_finished = bool(status_type.get('completed', False))
-        status_text = status_type.get('detail') or status_type.get('description')
+        status_info = competition.get("status", {})
+        status_type = status_info.get("type", {})
+        is_finished = bool(status_type.get("completed", False))
+        status_text = status_type.get("detail") or status_type.get("description")
 
-        start_date = competition.get('startDate') or event.get('date')
+        start_date = competition.get("startDate") or event.get("date")
         game_time = self._parse_datetime(start_date)
 
-        losing_team = self._determine_loser(is_finished, home_team['score'], away_team['score'], home_team['team'], away_team['team'])
-        winning_team = self._determine_winner(is_finished, home_team['score'], away_team['score'], home_team['team'], away_team['team'])
+        losing_team = self._determine_loser(
+            is_finished,
+            home_team["score"],
+            away_team["score"],
+            home_team["team"],
+            away_team["team"],
+        )
+        winning_team = self._determine_winner(
+            is_finished,
+            home_team["score"],
+            away_team["score"],
+            home_team["team"],
+            away_team["team"],
+        )
 
         return GameResult(
-            game_id=event.get('id', ''),
+            game_id=event.get("id", ""),
             game_time=game_time,
             season=season,
             week_number=week,
-            home_team=home_team['team'],
-            away_team=away_team['team'],
+            home_team=home_team["team"],
+            away_team=away_team["team"],
             is_finished=is_finished,
-            home_score=home_team['score'],
-            away_score=away_team['score'],
+            home_score=home_team["score"],
+            away_score=away_team["score"],
             status_text=status_text,
             winning_team=winning_team,
             losing_team=losing_team,
@@ -194,14 +217,14 @@ class ESPNGameOutcomeApi:
         if not timestamp:
             return None
         try:
-            return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         except ValueError:
             return None
 
     @staticmethod
     def _parse_score(score: Optional[str]) -> Optional[int]:
         """Convert score strings to integers, handling blanks."""
-        if score is None or score == '':
+        if score is None or score == "":
             return None
         try:
             return int(float(score))
@@ -214,7 +237,7 @@ class ESPNGameOutcomeApi:
         home_score: Optional[int],
         away_score: Optional[int],
         home_team: str,
-        away_team: str
+        away_team: str,
     ) -> Optional[str]:
         """Determine winning team abbreviation when available."""
         if not is_finished:
@@ -227,14 +250,14 @@ class ESPNGameOutcomeApi:
             return None
 
         return home_team if home_score > away_score else away_team
-    
+
     @staticmethod
     def _determine_loser(
         is_finished: bool,
         home_score: Optional[int],
         away_score: Optional[int],
         home_team: str,
-        away_team: str
+        away_team: str,
     ) -> Optional[str]:
         """Determine losing team abbreviation when available."""
         if not is_finished:
@@ -273,10 +296,12 @@ def fetch_game_results(weeks: List[int]) -> Dict[int, List[GameResult]]:
 
     return results
 
+
 @dataclass
 class GameOutcomeIngestParams:
     week: int
     poll_interval: int | None = None
+
 
 def ingest_game_outcomes(
     params: GameOutcomeIngestParams,
@@ -312,8 +337,7 @@ def ingest_game_outcomes(
                 break
 
             time.sleep(params.poll_interval)
-        
+
     except Exception as e:
         print(f"Error occurred during game outcome ingestion: {e}")
         return
-        

@@ -11,20 +11,30 @@ import pandas as pd
 
 from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
 
-from cbs_fantasy_tooling.analysis.core.config import N_SIMS, SHARP_BOOKS, SHARP_WEIGHT, get_field_composition
+from cbs_fantasy_tooling.analysis.core.config import (
+    N_SIMS,
+    SHARP_BOOKS,
+    SHARP_WEIGHT,
+    get_field_composition,
+)
 from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 from cbs_fantasy_tooling.analysis.core.simulator import simulate_many_weeks
-from cbs_fantasy_tooling.analysis.odds.converter import consensus_moneyline_probs, rows_to_game_probs
+from cbs_fantasy_tooling.analysis.odds.converter import (
+    consensus_moneyline_probs,
+    rows_to_game_probs,
+)
 from cbs_fantasy_tooling.analysis.utils.validation import validate_slate
 from cbs_fantasy_tooling.analysis.utils.storage import save_predictions
 from cbs_fantasy_tooling.analysis.user.analysis import simulate_user_picks, analyze_user_picks
-from cbs_fantasy_tooling.utils.date import get_commence_time_from, get_commence_time_to, get_current_nfl_week
+from cbs_fantasy_tooling.utils.date import (
+    get_commence_time_from,
+    get_commence_time_to,
+    get_current_nfl_week,
+)
 
 
 def run_strategy_simulation(
-    user_picks: Optional[str | list] = None,
-    analyze_only: bool = False,
-    n_sims: int = N_SIMS
+    user_picks: Optional[str | list] = None, analyze_only: bool = False, n_sims: int = N_SIMS
 ) -> Dict:
     """
     Run Monte Carlo simulation of confidence pool strategies.
@@ -57,9 +67,9 @@ def run_strategy_simulation(
 
     # Handle user picks if provided
     if user_picks:
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("ANALYZING YOUR CUSTOM PICKS")
-        print("="*60)
+        print("=" * 60)
 
         result = simulate_user_picks(user_picks, week_mapping, game_probs, strategy_mix, n_sims)
         if result:
@@ -68,19 +78,23 @@ def run_strategy_simulation(
             # Analyze picks
             analysis = analyze_user_picks(picks, confidence, week_mapping, game_probs)
 
-            print(f"\nYour Custom Pick Analysis:")
+            print("\nYour Custom Pick Analysis:")
             print(f"Expected Performance: {user_summary['expected_total_points']:.2f} total points")
             print(f"Expected Wins: {user_summary['expected_wins']:.2f}")
             print(f"Risk Assessment: {analysis['risk_assessment']}")
             print(f"Contrarian Picks: {analysis['contrarian_count']}")
 
-            if analysis['contrarian_picks']:
-                print(f"\nContrarian Games:")
-                for game in analysis['contrarian_picks']:
-                    print(f"  {game['game']} -> {game['pick']} (Conf: {game['confidence']}, Prob: {game['pick_prob']:.1%})")
+            if analysis["contrarian_picks"]:
+                print("\nContrarian Games:")
+                for game in analysis["contrarian_picks"]:
+                    print(
+                        f"  {game['game']} -> {game['pick']} (Conf: {game['confidence']}, Prob: {game['pick_prob']:.1%})"
+                    )
 
             # Save user predictions
-            user_filename = save_predictions("Custom-User", picks, confidence, week_mapping, game_probs)
+            user_filename = save_predictions(
+                "Custom-User", picks, confidence, week_mapping, game_probs
+            )
             print(f"\nYour picks saved to: out/{user_filename}")
 
             results["user_analysis"] = {
@@ -116,7 +130,9 @@ def run_strategy_simulation(
         strategy_results.append(results["user_analysis"]["summary"])
 
     results["strategies"] = strategy_results
-    results["comparison_df"] = pd.DataFrame(strategy_results).sort_values("expected_total_points", ascending=False)
+    results["comparison_df"] = pd.DataFrame(strategy_results).sort_values(
+        "expected_total_points", ascending=False
+    )
 
     user_summary = results["user_analysis"]["summary"] if results["user_analysis"] else None
     display_results(results["comparison_df"], user_summary)
@@ -128,6 +144,7 @@ def run_strategy_simulation(
     display_recommendations(week_mapping, game_probs)
 
     return results
+
 
 def get_weekly_game_probs_from_odds() -> tuple[np.ndarray, list[dict]]:
     """
@@ -144,7 +161,9 @@ def get_weekly_game_probs_from_odds() -> tuple[np.ndarray, list[dict]]:
     events = fetch_odds(from_date, to_date)
     rows = consensus_moneyline_probs(events, SHARP_BOOKS, SHARP_WEIGHT)
     if not rows:
-        raise RuntimeError("No rows built from odds response. Check API key, region, time window, or timing.")
+        raise RuntimeError(
+            "No rows built from odds response. Check API key, region, time window, or timing."
+        )
     return rows_to_game_probs(rows)
 
 
@@ -181,7 +200,12 @@ def save_results(df, week_mapping, game_probs):
 
     # Save predictions for all strategies
     print("\nSaving predictions for all tested strategies...")
-    strategies_to_save = ["Chalk-MaxPoints", "Slight-Contrarian", "Aggressive-Contrarian", "Random-MidShuffle"]
+    strategies_to_save = [
+        "Chalk-MaxPoints",
+        "Slight-Contrarian",
+        "Aggressive-Contrarian",
+        "Random-MidShuffle",
+    ]
 
     for strategy_name in strategies_to_save:
         strategy_func = STRATEGIES[strategy_name]
@@ -197,6 +221,6 @@ def display_recommendations(week_mapping, game_probs, recommended_strategy="Rand
 
     print(f"\nYour picks this week using {recommended_strategy}:\n")
     for i, g in enumerate(week_mapping, 1):
-        pick_team = g["favorite"] if picks[i-1] == 1 else g["dog"]
+        pick_team = g["favorite"] if picks[i - 1] == 1 else g["dog"]
         print(f"{i:>2}. {g['away_team']} at {g['home_team']}")
         print(f"    → PICK: {pick_team}, CONFIDENCE: {conf[i-1]}")

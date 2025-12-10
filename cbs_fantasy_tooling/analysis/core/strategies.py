@@ -78,6 +78,7 @@ def reorder_with_mid_boost(base_order, boost_indices, target_positions):
 # Strategy Implementations
 # ===============================
 
+
 def strategy_chalk_maxpoints(p):
     """
     Chalk-MaxPoints: Pick all favorites, order by probability.
@@ -94,7 +95,11 @@ def strategy_slight_contrarian(p):
     picks = picks_with_contrarians(p, num_coinflip_dogs=2, num_moderate_dogs=0)
     base_order = order_by_probability_desc(p)
     contrarians = [i for i, pick in enumerate(picks) if pick == 0]
-    order = reorder_with_mid_boost(base_order, contrarians[:1], [int(len(p)*0.55)]) if contrarians else base_order
+    order = (
+        reorder_with_mid_boost(base_order, contrarians[:1], [int(len(p) * 0.55)])
+        if contrarians
+        else base_order
+    )
     return picks, assign_confidence_order(order, len(p))
 
 
@@ -106,7 +111,7 @@ def strategy_aggressive_contrarian(p):
     picks = picks_with_contrarians(p, num_coinflip_dogs=3, num_moderate_dogs=2)
     base_order = order_by_probability_desc(p)
     contrarians = [i for i, pick in enumerate(picks) if pick == 0][:2]
-    targets = [int(len(p)*0.65), int(len(p)*0.50)][:len(contrarians)]
+    targets = [int(len(p) * 0.65), int(len(p) * 0.50)][: len(contrarians)]
     order = reorder_with_mid_boost(base_order, contrarians, targets)
     return picks, assign_confidence_order(order, len(p))
 
@@ -119,7 +124,7 @@ def strategy_random_midshuffle(p):
     picks = picks_favorites(p)
     order = order_by_probability_desc(p)
     n = len(order)
-    lo, hi = int(n*0.30), int(n*0.75)
+    lo, hi = int(n * 0.30), int(n * 0.75)
     mid = order[lo:hi]
     random.shuffle(mid)
     order = order[:lo] + mid + order[hi:]

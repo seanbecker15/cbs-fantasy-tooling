@@ -8,7 +8,7 @@ from .competitor_intelligence import analyze_competitors
 from .visualization.contrarian_picks import analyze_contrarian_picks
 
 __all__ = [
-    'run_strategy_simulation',
-    'analyze_competitors',
-    'analyze_contrarian_picks',
+    "run_strategy_simulation",
+    "analyze_competitors",
+    "analyze_contrarian_picks",
 ]

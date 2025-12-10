@@ -113,7 +113,7 @@ def simulate_many_weeks(p, your_strategy_name, others_mix, n_sims=5000):
         "expected_wins": float(your_wins.mean()),
         "P(get_Most_Wins_bonus)": float(your_mw_bonus.mean()),
         "P(get_Most_Points_bonus)": float(your_mp_bonus.mean()),
-        "expected_bonus_points": float(5*your_mw_bonus.mean() + 10*your_mp_bonus.mean()),
+        "expected_bonus_points": float(5 * your_mw_bonus.mean() + 10 * your_mp_bonus.mean()),
         "expected_total_points": float(your_totals.mean()),
         "stdev_total_points": float(your_totals.std(ddof=1)),
         "p10_total_points": float(np.percentile(your_totals, 10)),
