@@ -3,7 +3,27 @@
 Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs Monte Carlo strategy simulations using betting odds.
 
 ### Setup
-- Python 3.9+ recommended.  
+- Python 3.9+ recommended.
+
+#### Quick Setup with Task (Recommended)
+1. Install [Task](https://taskfile.dev/installation/):
+   ```bash
+   # macOS
+   brew install go-task/tap/go-task
+   
+   # Linux
+   sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+   
+   # Or see https://taskfile.dev/installation/ for other options
+   ```
+
+2. Run setup:
+   ```bash
+   task setup    # Creates venv and installs dependencies
+   source .venv/bin/activate
+   ```
+
+#### Manual Setup
 - Create a venv and install editable package:
   ```bash
   python -m venv .venv && source .venv/bin/activate
@@ -17,6 +37,8 @@ Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs M
   pip install -e '.[dev]'
   ```
   This installs `pytest`, `black`, and `ruff` for testing, formatting, and linting.
+
+#### Configuration
 - Create `.env` in the repo root:
   ```bash
   EMAIL=you@example.com           # CBS login (required for scraping)
@@ -56,7 +78,35 @@ Logs land in `/tmp/cbs-sports-scraper/`.
 ### Development
 
 #### Testing, Linting, and Formatting
-Helper scripts are provided to standardize the development workflow:
+
+**Option 1: Using Task (Recommended)**
+
+This project uses [Task](https://taskfile.dev/) to streamline development workflows. Install Task, then:
+
+```bash
+# First time setup (creates venv and installs dependencies)
+task setup
+
+# Activate the virtual environment
+source .venv/bin/activate
+
+# Run all checks before submitting a PR
+task check
+
+# Individual tasks
+task test      # Run tests
+task lint      # Run linter with auto-fix
+task format    # Format code
+
+# Other useful tasks
+task run       # Run the interactive CLI
+task clean     # Clean up generated files
+task --list    # Show all available tasks
+```
+
+**Option 2: Using Scripts Directly**
+
+Helper scripts are also provided for manual workflow control:
 
 ```bash
 # Run all tests
@@ -69,8 +119,12 @@ Helper scripts are provided to standardize the development workflow:
 ./scripts/format.sh
 ```
 
-**Before submitting a PR**, run these scripts locally to ensure your code passes CI checks:
+**Before submitting a PR**, run all checks locally:
 ```bash
+# Using Task (recommended)
+task check
+
+# Or using scripts directly
 ./scripts/format.sh && ./scripts/lint.sh && ./scripts/test.sh
 ```
 
@@ -81,8 +135,8 @@ All scripts:
 
 #### Continuous Integration
 The repository uses GitHub Actions to automatically run tests, linting, and formatting checks on:
-- All pushes to `main`/`master` branches
-- All pull requests targeting `main`/`master`
+- All pushes to `main` branch
+- All pull requests targeting `main`
 
 The CI workflow:
 - Tests against Python 3.9, 3.10, 3.11, and 3.12

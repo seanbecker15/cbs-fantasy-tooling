@@ -1,0 +1,113 @@
+version: '3'
+
+vars:
+  PYTHON: python
+  VENV_DIR: .venv
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  setup:
+    desc: Set up development environment (create venv and install dependencies)
+    cmds:
+      - '{{.PYTHON}} -m venv {{.VENV_DIR}}'
+      - '{{.VENV_DIR}}/bin/pip install --upgrade pip'
+      - '{{.VENV_DIR}}/bin/pip install -e ".[dev]"'
+    sources:
+      - pyproject.toml
+      - requirements.txt
+    generates:
+      - '{{.VENV_DIR}}/bin/activate'
+
+  test:
+    desc: Run all tests using pytest
+    dir: .
+    cmds:
+      - ./scripts/test.sh
+    deps:
+      - check-venv
+
+  lint:
+    desc: Run linter (ruff) with auto-fix
+    dir: .
+    cmds:
+      - ./scripts/lint.sh
+    deps:
+      - check-venv
+
+  format:
+    desc: Run code formatter (black)
+    dir: .
+    cmds:
+      - ./scripts/format.sh
+    deps:
+      - check-venv
+
+  check:
+    desc: Run all checks (format, lint, test) - recommended before PR
+    cmds:
+      - task: format
+      - task: lint
+      - task: test
+
+  format-check:
+    desc: Check code formatting without making changes (CI mode)
+    dir: .
+    cmds:
+      - black --check .
+    deps:
+      - check-venv
+
+  lint-check:
+    desc: Run linter without auto-fix (CI mode)
+    dir: .
+    cmds:
+      - ruff check .
+    deps:
+      - check-venv
+
+  clean:
+    desc: Clean up generated files and caches
+    cmds:
+      - rm -rf .pytest_cache
+      - rm -rf .ruff_cache
+      - rm -rf **/__pycache__
+      - rm -rf *.egg-info
+      - rm -rf dist
+      - rm -rf build
+      - rm -rf out/*.csv out/*.json
+
+  clean-venv:
+    desc: Remove virtual environment
+    cmds:
+      - rm -rf {{.VENV_DIR}}
+
+  check-venv:
+    desc: Check if virtual environment is activated
+    internal: true
+    preconditions:
+      - sh: '[ -n "$VIRTUAL_ENV" ]'
+        msg: |
+          Virtual environment is not activated.
+          Please activate it first:
+            source .venv/bin/activate
+          Or use 'task setup' to create it.
+
+  run:
+    desc: Run the interactive CLI
+    dir: .
+    cmds:
+      - python -m cbs_fantasy_tooling.main
+    deps:
+      - check-venv
+
+  install:
+    desc: Install package in development mode
+    dir: .
+    cmds:
+      - pip install -e ".[dev]"
+    deps:
+      - check-venv
