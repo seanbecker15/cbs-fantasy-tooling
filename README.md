@@ -73,7 +73,7 @@ The repository uses GitHub Actions to automatically run tests, linting, and form
 - All pull requests targeting `main`
 
 The CI workflow:
-- Tests against Python 3.9, 3.10, 3.11, and 3.12
+- Tests against Python 3.9
 - Runs on Ubuntu Linux
 - Caches dependencies for faster builds
 - **Fails PRs** if any check fails
