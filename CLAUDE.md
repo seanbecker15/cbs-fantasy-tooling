@@ -361,7 +361,6 @@ Each week file contains structured game data:
       "winner": "SF",
       "loser": "LAR",
       "completed": true,
-      "game_date": "2025-10-03T00:15Z"
     }
   ]
 }
