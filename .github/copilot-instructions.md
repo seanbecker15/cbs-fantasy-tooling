@@ -63,7 +63,7 @@ ruff check --fix .       # Fix linting issues
 python -m cbs_fantasy_tooling.main  # Interactive CLI with InquirerPy menus
 ```
 
-**Note**: The `cbs-scrape` command defined in `pyproject.toml` is broken (tries to import non-existent `app`). Use `python -m` instead.
+**Note**: The `cbs-scrape` command defined in `pyproject.toml` doesn't work (expects `app` callable, but `main.py` only exports `main()` function). Use `python -m` instead.
 
 **Validation**: Run CLI after changes → test in "Once" mode → verify outputs in `./out/` (CSV/JSON files)
 
@@ -154,7 +154,7 @@ cbs-fantasy-tooling/
 - Real-time mode stubbed (TODOs in `main.py` lines 102, 116)
 - No CI/CD or pre-commit hooks
 - Chrome required for scraping
-- `cbs-scrape` command broken (use `python -m cbs_fantasy_tooling.main` instead)
+- `cbs-scrape` command doesn't work (entry point expects `app` callable, only `main()` exists)
 - `pyproject.toml` dependencies incomplete (must also install `requirements.txt`)
 
 ## Key Files
