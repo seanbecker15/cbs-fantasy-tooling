@@ -3,27 +3,7 @@
 Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs Monte Carlo strategy simulations using betting odds.
 
 ### Setup
-- Python 3.9+ recommended.
-
-#### Quick Setup with Task (Recommended)
-1. Install [Task](https://taskfile.dev/installation/):
-   ```bash
-   # macOS
-   brew install go-task/tap/go-task
-   
-   # Linux
-   sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-   
-   # Or see https://taskfile.dev/installation/ for other options
-   ```
-
-2. Run setup:
-   ```bash
-   task setup    # Creates venv and installs dependencies
-   source .venv/bin/activate
-   ```
-
-#### Manual Setup
+- Python 3.9+ recommended.  
 - Create a venv and install editable package:
   ```bash
   python -m venv .venv && source .venv/bin/activate
@@ -37,8 +17,6 @@ Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs M
   pip install -e '.[dev]'
   ```
   This installs `pytest`, `black`, and `ruff` for testing, formatting, and linting.
-
-#### Configuration
 - Create `.env` in the repo root:
   ```bash
   EMAIL=you@example.com           # CBS login (required for scraping)
@@ -77,61 +55,29 @@ Logs land in `/tmp/cbs-sports-scraper/`.
 
 ### Development
 
-#### Testing, Linting, and Formatting
+#### Using Task (Recommended)
 
-**Option 1: Using Task (Recommended)**
-
-This project uses [Task](https://taskfile.dev/) to streamline development workflows. Install Task, then:
+Install [Task](https://taskfile.dev/installation/) and run `task --list` to see all available commands.
 
 ```bash
-# First time setup (creates venv and installs dependencies)
-task setup
+# macOS: brew install go-task
+# Linux: sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
 
-# Activate the virtual environment
-source .venv/bin/activate
-
-# Run all checks before submitting a PR
-task check
-
-# Individual tasks
-task test      # Run tests
-task lint      # Run linter with auto-fix
-task format    # Format code
-
-# Other useful tasks
-task run       # Run the interactive CLI
-task clean     # Clean up generated files
 task --list    # Show all available tasks
+task check     # Run all checks before submitting a PR
 ```
 
-**Option 2: Using Scripts Directly**
+#### Using Scripts Directly
 
-Helper scripts are also provided for manual workflow control:
+Helper scripts are also provided:
 
 ```bash
-# Run all tests
-./scripts/test.sh
-
-# Run linter (ruff) with auto-fix
-./scripts/lint.sh
-
-# Run code formatter (black)
-./scripts/format.sh
+./scripts/test.sh      # Run tests
+./scripts/lint.sh      # Run linter with auto-fix
+./scripts/format.sh    # Format code
 ```
 
-**Before submitting a PR**, run all checks locally:
-```bash
-# Using Task (recommended)
-task check
-
-# Or using scripts directly
-./scripts/format.sh && ./scripts/lint.sh && ./scripts/test.sh
-```
-
-All scripts:
-- Check for virtual environment activation and fail gracefully if not active
-- Provide colored output and summary messages
-- Propagate exit codes for CI integration
+**Before submitting a PR**: `task check` or `./scripts/format.sh && ./scripts/lint.sh && ./scripts/test.sh`
 
 #### Continuous Integration
 The repository uses GitHub Actions to automatically run tests, linting, and formatting checks on:
