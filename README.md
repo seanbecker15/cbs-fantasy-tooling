@@ -26,6 +26,8 @@ Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs M
 
 ### Daily Usage (Interactive CLI)
 ```bash
+cbs-scrape
+# OR
 python -m cbs_fantasy_tooling.main
 ```
 - **Ingest Data** → Pick'em Results (CBS scrape) and/or Game Outcomes (ESPN API).  

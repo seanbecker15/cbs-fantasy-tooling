@@ -31,7 +31,7 @@ dev = [
 ]
 
 [project.scripts]
-cbs-scrape = "cbs_fantasy_tooling.main:app"
+cbs-scrape = "cbs_fantasy_tooling.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
