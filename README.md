@@ -9,6 +9,8 @@ Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs M
   python -m venv .venv && source .venv/bin/activate
   pip install -e .
   ```
+  
+  **Note**: All required dependencies are specified in `pyproject.toml` and will be installed automatically. The `requirements.txt` file is kept for backwards compatibility and pinned versions but is not required for installation.
 - Create `.env` in the repo root:
   ```bash
   EMAIL=you@example.com           # CBS login (required for scraping)
