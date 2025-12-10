@@ -1,375 +1,172 @@
-# CBS Fantasy Tooling
+<!--
+DESIGN PHILOSOPHY:
+This file is a high-leverage "constitution" for AI agents, not a manual.
+- Keep it <200 lines. If you need more, externalize to docs/
+- Focus on guardrails, 80/20 workflows, and pointers
+- Replace "never do X" with "avoid X; prefer Y because Z"
+- Pitch external docs: explain WHEN to read them and WHY
+- Prefer CLI wrappers over documenting complex command chains
 
-## Overview
-This is a Python-based web scraping tool that automatically extracts fantasy sports data from CBS Sports fantasy football pools and sends email notifications with the results. The application is designed to run as a scheduled task to collect weekly fantasy league standings.
+To grow this file:
+1. Ask: Is this frequently relevant across weeks/tasks?
+2. Ask: Does this prevent a repeated, costly mistake?
+3. If no to both: put it in docs/ and add a pointer here
+-->
 
-## Project Structure
+# CBS Fantasy Tooling - Agent Constitution
 
-### Core Application (`app/` directory)
-- **`main.py`** - Entry point that orchestrates the scraping and publishing process
-- **`scrape.py`** - Web scraper using Selenium to extract data from CBS Sports
-- **`config.py`** - Configuration management for environment variables and settings
-- **`storage.py`** - Data models and CSV handling for scraped results
-- **`publishers/`** - Publisher system for sending results via different methods:
-  - **`email.py`** - Gmail API and SendGrid email publishers
-  - **`file.py`** - File publisher for local storage
+## Global Guardrails
 
-### Supporting Files
-- **`requirements.txt`** - Python dependencies
-- **`schedule/`** - Contains macOS LaunchAgent plist file for scheduling
-- **`scripts/`** - Helper scripts for scheduling/unscheduling tasks
-- **`out/`** - Output directory for CSV results
-- **`simulator/`** - NFL confidence pool strategy simulation tools
+**Safety & Reliability:**
+- Never commit secrets (`.env`, `credentials.json`, `token.pickle`). Check `.gitignore` before adding files.
+- Avoid breaking idempotency: data ingestion should safely retry without duplicates.
+- Prefer explicit types (Pydantic models, type hints) over dynamic dicts. Catch errors at dev time, not runtime.
+- For external API calls (ESPN, TheOddsAPI, CBS), implement retries with exponential backoff. APIs are flaky.
 
-## Key Features
+**Correctness Over Cleverness:**
+- Prioritize readable, boring code over clever optimizations. Other engineers (and future LLMs) need to understand this.
+- For critical business logic (scoring, Monte Carlo sim, probability calculations): write tests FIRST to clarify requirements.
+- For simple CRUD or API wrappers: write tests after implementation if needed.
 
-### 1. Automated Web Scraping (`scrape.py`)
-- Uses Selenium WebDriver to automate CBS Sports login
-- Navigates to fantasy pool standings for specific weeks
-- Extracts player names, points, wins, and losses from weekly standings table
-- Handles dynamic content loading and week navigation
-- Robust error handling with retry logic for unreliable page loads
+**Development Workflow:**
+- Use the interactive CLI (`cbs-scrape`) as the entry point, not direct Python module calls.
+- Test changes by running CLI in "Once" mode with manual week selection before committing.
+- Verify data output in `./out/` directory after ingestion or analysis.
 
-### 2. Publisher System (`publishers/`)
-- **Gmail API Integration** - Primary email publisher using OAuth 2.0 authentication
-- **File Publishing** - Local CSV file output
-- Modular design allows enabling/disabling specific publishers
-- HTML-formatted email reports with CSV attachments
-- Highlights weekly winners (most wins and most points)
+## Tech Stack & Tools
 
-### 3. Configuration Management (`config.py`)
-- Environment variable management via `.env` file
-- Publisher configuration and validation
-- Flexible settings for different deployment scenarios
-- Support for multiple email providers and storage options
+**Core Stack:**
+- Python 3.x with virtual environment (`.venv`)
+- **Web Scraping**: Selenium WebDriver (CBS login, dynamic content)
+- **APIs**: ESPN (game results), TheOddsAPI (moneylines), Google Gmail API (publishing)
+- **Data**: Pandas (CSV), JSON (structured output), Supabase (optional DB storage)
+- **Analysis**: NumPy (Monte Carlo), Matplotlib (visualization)
+- **CLI**: InquirerPy (interactive menus), Typer (planned but not primary)
 
-### 4. Scheduling Integration (`main.py`)
-- Calculates current NFL week automatically based on season start date (September 2, 2025)
-- Supports manual week overrides for testing
-- Integrates scraping and publishing into single workflow
-- Automatic fallback between publishers on failure
-
-### 5. Confidence Pool Strategy Simulator (`simulator/`)
-- **`main.py`** - Comprehensive NFL confidence pool strategy simulation with real-time odds integration
-- **`monte.py`** - Standalone Monte Carlo simulation engine for confidence pool strategy analysis
-- **`game_results_fetcher.py`** - Fetches historical NFL game results from ESPN API for competitive intelligence analysis
-- **`example_result.md`** - Sample output showing simulation results and strategy recommendations
-
-#### Simulator Features:
-- **Real-time Odds Integration**: Fetches current week NFL moneylines from The Odds API
-- **De-vig Probability Calculation**: Converts betting odds to fair win probabilities using median consensus across multiple sportsbooks
-- **Sharp Book Weighting**: Overweights reputable books like Pinnacle and Circa for more accurate probabilities
-- **Multiple Strategy Support**:
-  - `Chalk-MaxPoints`: Pure favorite-picking, confidence ordered by probability
-  - `Slight-Contrarian`: Strategic contrarian picks on coin-flip games with mid-confidence boosts
-  - `Aggressive-Contrarian`: Multiple contrarian picks including moderate underdogs
-  - `Random-MidShuffle`: Probability-based ordering with middle-tier shuffling to reduce correlation
-- **Monte Carlo Analysis**: Simulates 20,000 weeks to calculate expected values, standard deviations, and percentile distributions
-- **Bonus System Modeling**: Accurately models weekly bonuses (+5 for Most Wins, +10 for Most Points)
-- **League Field Composition**: Configurable mix of opponent strategies (32-person league simulation)
-- **Automatic Week Detection**: Restricts to current NFL week using Tuesday-to-Tuesday time windows
-- **Fallback Mode**: Uses synthetic realistic probability slate if API is unavailable
-- **Visual Analytics**: Matplotlib charts showing strategy performance comparisons
-- **CSV Export**: Exports detailed strategy comparison results for analysis
-- **Prediction Storage**: Automatically saves strategy predictions in structured JSON format using standardized file naming
-- **Custom Pick Analysis**: Input your own picks for Monte Carlo simulation and performance analysis against the field
-- **Historical Game Results**: Automatically fetches NFL game outcomes from ESPN API for competitive intelligence and back-testing
-
-## Configuration Requirements
-
-### Environment Variables
-Core scraping configuration:
-- `EMAIL` - CBS Sports login email
-- `PASSWORD` - CBS Sports login password
-
-Publisher configuration (via `ENABLED_PUBLISHERS` setting):
-- **Gmail Publisher**: Requires `credentials.json` file for OAuth 2.0
-- **SendGrid Publisher**: Requires `SENDGRID_API_KEY` for legacy support
-- **File Publisher**: Local output directory configuration
-
-Simulator configuration:
-- `THE_ODDS_API_KEY` - Required API key from The Odds API for real-time NFL moneylines
-- `WEEK_ONE_START_DATE` - Season start date in YYYY-MM-DD format (default: "2025-09-02")
-- `OUTPUT_DIR` - Output directory for results and data files (default: "out")
-
-### Dependencies
-Key Python packages from `requirements.txt`:
-- `selenium` - Web browser automation for CBS Sports scraping
-- `google-auth`, `google-auth-oauthlib`, `google-api-python-client` - Gmail API integration
-- `sendgrid` - Legacy SendGrid email support
-- `python-dotenv` - Environment variable management
-- `requests` - HTTP client library
-- `numpy` - Numerical computing for simulations
-- `pandas` - Data analysis and CSV handling
-- `matplotlib` - Data visualization and plotting
-
-## Scheduling
-- Designed to run weekly on Tuesdays at 9 AM via macOS LaunchAgent
-- Helper scripts provided for easy scheduling setup
-- Logs stored in `/tmp/cbs-sports-scraper/` directory
-
-## Testing and Development
-- Manual week overrides available in `main.py` for testing different weeks
-- Includes retry logic for handling CBS Sports page loading issues
-- Comprehensive error handling and logging throughout
-
-## Data Output
-
-### Main Application
-- Generates CSV format with columns: Name, Points, Wins, Losses
-- Identifies and reports weekly leaders in both categories
-- Results can be stored locally in `out/` directory
-
-### Simulator
-- **Strategy Analysis CSV**: Comparative performance metrics across all strategies saved to `./out` directory
-- **Weekly Picks Output**: Detailed pick recommendations with confidence levels for chosen strategy
-- **Performance Distribution Charts**: Visual comparison of expected total points by strategy
-- **Probability Slate Preview**: Current week's games with consensus win probabilities
-- **Prediction Files**: JSON files for each strategy with structured predictions
-- **Strategy Summary CSV**: Monte Carlo simulation results comparing all strategies
-
-#### Prediction File Structure
-The simulator generates JSON prediction files with the following structure:
-```json
-{
-  "metadata": {
-    "strategy": "Random-MidShuffle",
-    "week": 2,
-    "generated_at": "2025-09-10T09:57:05.612402",
-    "total_games": 16,
-    "simulator_version": "v2"
-  },
-  "games": [
-    {
-      "game_id": "unique_game_identifier",
-      "away_team": "Team Name",
-      "home_team": "Team Name", 
-      "favorite": "Team Name",
-      "dog": "Team Name",
-      "favorite_prob": 0.8587,
-      "commence_time": "2025-09-14T17:01:00Z",
-      "prediction": {
-        "pick_team": "Team Name",
-        "pick_is_favorite": true,
-        "confidence_level": 16,
-        "confidence_rank": 1
-      }
-    }
-  ]
-}
-```
-
-**Strategy Codes**: 
-- `chalk` - Chalk-MaxPoints strategy
-- `slight` - Slight-Contrarian strategy  
-- `aggress` - Aggressive-Contrarian strategy
-- `shuffle` - Random-MidShuffle strategy
-- `user` - Custom user picks
-
-#### Output File Naming Patterns
-All simulator outputs are saved to the `./out` directory following consistent naming conventions:
-
-- **Strategy Summary**: `week_{N}_strategy_summary_{YYYYMMDD}_{HHMMSS}.csv`
-  - Contains Monte Carlo simulation results comparing expected performance across all strategies
-  - Includes metrics like expected points, win probability, bonus chances, and percentile distributions
-
-- **Strategy Predictions**: `week_{N}_predictions_{strategy_code}_{YYYYMMDD}_{HHMMSS}.json`  
-  - Individual strategy picks and confidence levels for each game
-  - Structured JSON format optimized for LLM consumption and analysis
-  - Games sorted by confidence level (highest confidence first)
-
-## Usage
-
-### Running the Simulator
-
-#### Basic Usage
+**Key Commands:**
 ```bash
-# Set up environment (or use .env file in root of project)
-export THE_ODDS_API_KEY="your_key_here"
+# Setup (one-time)
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
 
-# Activate virtual python environment and install dependencies
-source venv/bin/activate && pip install -r requirements.txt
+# Primary interface
+cbs-scrape                           # Interactive CLI menu
 
-# Run simulation with real odds (built-in strategies only)
-python simulator/main.py
-
-# Or run standalone Monte Carlo with synthetic data
-python simulator/monte.py
+# Validation
+pytest                               # Run tests (if present)
+python -m cbs_fantasy_tooling.main   # Direct module entry (avoid; use CLI)
 ```
 
-#### Analyzing Your Custom Picks
-```bash
-# Analyze your picks alongside built-in strategies
-python simulator/main.py --user-picks "Ravens,Bills,Cardinals,Cowboys,Lions,Rams,49ers,Bengals,Packers,Vikings,Steelers,Chargers,Texans,Broncos,Dolphins,Eagles"
+**Common Workflows:**
+1. **Data Ingestion**: CLI → "Ingest Data" → pick source (Pick'em, Games, Odds) → select week
+2. **Strategy Analysis**: CLI → "Analyze Data" → "Strategy Simulator" → optionally input picks
+3. **Competitor Intel**: CLI → "Analyze Data" → "Competitor Intelligence" → specify week
 
-# Analyze only your picks (skip built-in strategy comparison)
-python simulator/main.py --user-picks "Ravens,Bills,Cardinals,..." --analyze-only
+## Core Architecture (High-Level Only)
 
-# Load picks from JSON file
-python simulator/main.py --picks-file picks.json
+**Data Flow:**
+```
+Ingest (cbs_sports/, espn/, the_odds_api/)
+  ↓
+Storage (providers/: file, database)
+  ↓
+Publishers (gmail, file, database - configurable via ENABLED_PUBLISHERS)
+  ↓
+Analysis (monte_carlo.py, competitor_intelligence.py)
 ```
 
-#### Custom Pick Input Formats
-- **Team Names**: Use full names ("Baltimore Ravens") or common abbreviations ("Ravens", "BAL")
-- **Confidence Order**: List teams from highest confidence (16) to lowest confidence (1)
-- **Flexible Matching**: Handles variations like "Ravens", "Baltimore Ravens", "BAL", etc.
+**Key Modules:**
+- `main.py` - CLI entry point (start here for interactive workflows)
+- `ingest/` - Data fetching (Selenium scraping, API calls)
+- `storage/` - Persistence layer (file, DB)
+- `publishers/` - Output distribution (email, CSV, Supabase)
+- `analysis/` - Monte Carlo sim, competitor patterns, contrarian picks
 
-#### Command Line Options
-- `--user-picks "team1,team2,..."`: Comma-separated list of teams in confidence order
-- `--picks-file path/to/file.json`: Load picks from JSON file
-- `--analyze-only`: Skip built-in strategies, only analyze your custom picks
+**Critical Files:**
+- `.env` - Secrets and config (never commit; check `.env.example` for required vars)
+- `out/` - All analysis output (CSVs, JSON predictions, charts)
+- `config.py` - Centralized config management
 
-#### Usage Examples
+## Anti-Patterns & Gotchas
 
-**Example 1: Quick Pick Analysis**
-```bash
-python simulator/main.py --user-picks "BAL,BUF,ARI,DAL,DET,LAR,SF,CIN,GB,MIN,PIT,LAC,HOU,DEN,MIA,PHI" --analyze-only
-```
-Output:
-```
-============================================================
-ANALYZING YOUR CUSTOM PICKS
-============================================================
+**Avoid manual data wrangling; use the storage layer:**
+- ❌ Don't write ad-hoc CSV parsing in analysis scripts
+- ✅ Use `storage.providers` abstractions; they handle formatting and paths
 
-Your Custom Pick Analysis:
-Expected Performance: 96.80 total points
-Expected Wins: 10.31
-Risk Assessment: Conservative (no contrarian picks)
-Contrarian Picks: 0
+**Avoid hardcoding weeks or seasons:**
+- ❌ Don't use `week = 14` in code
+- ✅ Use `config.py` to calculate current week from `WEEK_ONE_START_DATE` (Tuesday-to-Tuesday windows)
+- **Why**: Prevents stale code as season progresses
 
-Analysis complete. Your expected performance: 96.80 points
-```
+**Avoid storing API keys in code:**
+- ❌ `api_key = "abc123"` in any module
+- ✅ Read from env via `config.py`: `os.getenv("THE_ODDS_API_KEY")`
+- **Why**: Prevents credential leaks; enables different keys per environment
 
-**Example 2: Full Strategy Comparison**
-```bash
-python simulator/main.py --user-picks "Ravens,Bills,Cardinals,Cowboys,Lions,Rams,49ers,Bengals,Packers,Vikings,Steelers,Chargers,Texans,Broncos,Dolphins,Eagles"
-```
-Output:
-```
-Confidence Pool Strategy — Monte Carlo Summary
-(Including your custom picks)
-             strategy  expected_total_points
-      Chalk-MaxPoints                97.36
-    Random-MidShuffle                96.93
-          Custom-User                96.80
-    Slight-Contrarian                95.03
-Aggressive-Contrarian                91.72
-```
+**Avoid running scrapers without testing selectors first:**
+- ❌ Assume CBS Sports HTML structure is stable
+- ✅ Run in "Once" mode first; verify output in `./out/`; CBS often changes their DOM
+- **Why**: Selenium scripts are brittle; catch breakage early
 
-**Example 3: Team Name Flexibility**
-All of these work identically:
-```bash
-# Full team names
-python simulator/main.py --user-picks "Baltimore Ravens,Buffalo Bills,Arizona Cardinals,..."
+**Avoid skipping de-vig for probability calculations:**
+- ❌ Using raw betting odds as win probabilities
+- ✅ The codebase already implements median consensus de-vig with sharp book weighting
+- **Why**: Bookmaker margins skew probabilities; de-vig gives fairer estimates
 
-# Common abbreviations
-python simulator/main.py --user-picks "Ravens,Bills,Cardinals,..."
+**Avoid pushing untested Monte Carlo changes:**
+- ❌ Modifying `analysis/core/` strategy logic without validation
+- ✅ Run full strategy comparison (`cbs-scrape → Analyze → Strategy Simulator`) and sanity-check expected points
+- **Why**: Small bugs in probability logic cause huge EV miscalculations
 
-# NFL abbreviations
-python simulator/main.py --user-picks "BAL,BUF,ARI,DAL,DET,LAR,SF,CIN,GB,MIN,PIT,LAC,HOU,DEN,MIA,PHI"
-```
+## External Docs & When To Read Them
 
-**Example 4: JSON File Input**
-Create `my_picks.json`:
-```json
-{
-  "picks": ["Ravens", "Bills", "Cardinals", "Cowboys", "Lions", "Rams", "49ers", "Bengals", "Packers", "Vikings", "Steelers", "Chargers", "Texans", "Broncos", "Dolphins", "Eagles"]
-}
-```
-Then run:
-```bash
-python simulator/main.py --picks-file my_picks.json
-```
+**Onboarding / setup:**
+- `README.md` — Minimal install + `.env` keys; how to run the interactive CLI.
 
-**Example 5: Analyzing Contrarian Strategies**
-```bash
-python simulator/main.py --user-picks "Ravens,Bills,Cardinals,Cowboys,Patriots,Rams,49ers,Jaguars,Packers,Vikings,Seahawks,Chargers,Texans,Colts,Dolphins,Chiefs"
-```
-Output would show:
-```
-Risk Assessment: Moderate (limited contrarian picks)
-Contrarian Picks: 4
+**Core usage:**
+- `docs/usage.md` — Confidence pool simulator (odds → strategies → outputs). Use weekly. 
+- `docs/win-analyzer.md` — Supabase-driven “can I still win?” analysis; leaderboard mode. Use mid-week/live.
+- `docs/realtime.md` — How to run CBS polling loop into Supabase; notes on limitations.
 
-Contrarian Games:
-  New England Patriots at Miami Dolphins -> Patriots (Conf: 12, Prob: 48.0%)
-  Jacksonville Jaguars at Cincinnati Bengals -> Jaguars (Conf: 8, Prob: 37.8%)
-  ...
-```
+**Data + internals:**
+- `docs/data-sources.md` — Where data comes from (CBS, ESPN, The Odds API) and failure modes.
+- `docs/monte-carlo.md` — Strategy definitions, tunables (`STRATEGY_MIX`, `N_SIMS`, sharp weighting).
 
-The simulator provides comprehensive strategy analysis for NFL confidence pools, helping optimize weekly performance through data-driven decision making. It integrates real-time betting market data to generate the most accurate probability assessments available.
+**Outputs & delivery:**
+- `docs/publishers.md` — File/Gmail/Supabase publishers and required env/config.
+- `docs/schemas.md` — File formats and Supabase table columns for integrating consumers.
 
-### Fetching Historical Game Results
+**Roadmap:**
+- `docs/streaming-tasks.md` — Short task list to populate `game_status` and power overlays.
 
-The game results fetcher automatically downloads NFL game outcomes from ESPN API for competitive intelligence analysis and back-testing strategies.
+## Wrapper Opportunities (Future Improvements)
 
-#### Auto-Detection Mode (Recommended)
-```bash
-# Automatically fetches missing weeks based on WEEK_ONE_START_DATE
-python simulator/game_results_fetcher.py
-```
+**Instead of documenting complex commands, create wrappers:**
 
-The script will:
-1. Calculate the current NFL week from `WEEK_ONE_START_DATE` environment variable
-2. Scan the output directory to identify missing weeks
-3. Fetch only the weeks that haven't been downloaded yet
-4. Save results as JSON files (e.g., `week_1_game_results.json`)
+1. **Testing scraper without full ingestion:**
+   ```bash
+   # Current: long selenium debugging process
+   # Proposed: ./scripts/test-scraper.sh --week 14 --dry-run
+   ```
 
-If all weeks are up-to-date, it exits gracefully:
-```
-✓ All weeks up to Week 6 are already fetched!
-  Output directory: out
+2. **Bulk historical data fetch:**
+   ```bash
+   # Current: manually loop through weeks in CLI
+   # Proposed: ./scripts/backfill-weeks.sh 1-17
+   ```
 
-Nothing to fetch. Use --weeks to fetch specific weeks.
-```
+3. **Strategy validation:**
+   ```bash
+   # Current: navigate CLI menus each time
+   # Proposed: ./scripts/run-strategy.sh --picks "Ravens,Bills,..." --compare
+   ```
 
-#### Manual Week Selection
-```bash
-# Fetch specific weeks (comma-separated)
-python simulator/game_results_fetcher.py --weeks=1,2,3,4 --year=2025
+**When to add a wrapper:**
+- If you document a command >2 lines with complex flags
+- If a workflow requires >3 manual CLI menu selections
+- If you need to run the same operation across multiple weeks/seasons
 
-# Fetch week range
-python simulator/game_results_fetcher.py --weeks=1-5 --year=2025
+---
 
-# Fetch single week
-python simulator/game_results_fetcher.py --weeks=3 --year=2024
-
-# Override output directory
-python simulator/game_results_fetcher.py --weeks=1-3 --output-dir=backups
-```
-
-#### Command Line Options
-- `--weeks`: Comma-separated week numbers (e.g., `1,2,3,4`) or range (e.g., `1-5`). Omit for auto-detection.
-- `--year`: NFL season year (default: `2025`)
-- `--output-dir`: Output directory (default: value from `OUTPUT_DIR` env variable or `out`)
-
-#### Game Results JSON Structure
-Each week file contains structured game data:
-```json
-{
-  "week": 5,
-  "season": 2025,
-  "num_games": 14,
-  "games": [
-    {
-      "game_id": "401772939",
-      "week": 5,
-      "season": 2025,
-      "away_team": "SF",
-      "home_team": "LAR",
-      "away_score": 26,
-      "home_score": 23,
-      "winner": "SF",
-      "loser": "LAR",
-      "completed": true,
-    }
-  ]
-}
-```
-
-#### Use Cases
-- **Competitive Intelligence**: Analyze opponent pick patterns and outcomes
-- **Strategy Back-Testing**: Evaluate historical performance of different strategies
-- **Automated Analysis**: Run scheduled jobs to fetch latest results for analysis pipelines
-- **Data Enrichment**: Combine with prediction files to calculate actual vs. expected performance
-
-This tool automates the tedious process of manually checking fantasy football results and ensures all league participants receive timely updates via email with detailed standings data. The simulator component adds advanced analytics for confidence pool strategy optimization.
+**Last Updated**: 2025-12-09
+**For questions**: Check git history or ask the human (me).
