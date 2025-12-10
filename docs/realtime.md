@@ -1,39 +1,34 @@
-# Realtime Polling (CBS Pick'em)
+# Realtime Polling
 
-Lightweight guide for keeping the CBS standings page open and streaming updates into Supabase. The interactive CLI’s “Real-Time” option is not wired yet; use the snippet below for now.
+Real-time ingestion runs background threads that continuously poll for Pick'em standings (CBS) and Game Outcomes (ESPN) until the program exits.
 
-## Requirements
-- Chrome + matching chromedriver installed.  
-- `.env`: `EMAIL`, `PASSWORD`, `SUPABASE_URL`, `SUPABASE_KEY`, `ENABLED_PUBLISHERS=database` (file/gmail are skipped in realtime loop).  
-- Supabase tables as defined in `storage/providers/database.py` (`player_results`, `player_picks`).
+## Quick Start
 
-## One-Off Scrape (no polling)
-Recommended when you just need the current standings.
 ```bash
 python -m cbs_fantasy_tooling.main
-# Ingest Data → Pick'em Results → Once
-# Choose target week when prompted
+# Select: Ingest Data → Pick'em/Game Outcomes → Real-Time → Enter week
 ```
-Results are saved via enabled publishers (file/database/gmail).
 
-## Realtime Polling (manual entry point)
-```bash
-python - <<'PY'
-from cbs_fantasy_tooling.ingest.cbs_sports.scrape import PickemIngestParams, ingest_pickem_results
-from cbs_fantasy_tooling.publishers.factory import create_publishers
+**Requirements**: `.env` with `EMAIL`, `PASSWORD` (CBS), `THE_ODDS_API_KEY` (ESPN), optionally `SUPABASE_URL`/`SUPABASE_KEY` for database publishing.
 
-publishers = create_publishers()
-params = PickemIngestParams(curr_week=14, target_week=14, poll_interval=30)  # seconds
-ingest_pickem_results(params, publishers)
-PY
-```
-Behavior:
-- Opens Chrome, logs in, navigates to target week, then refreshes/scrapes every `poll_interval` seconds.  
-- Only publishes to the **database** publisher during polling (change detection keeps writes minimal).  
-- Press Enter in the terminal to stop; the browser closes cleanly.
+## How It Works
 
-## Notes and Limitations
-- Game outcome polling is not wired; this loop only streams CBS pick’em standings.  
-- If Supabase creds are missing, realtime updates will skip publishing.  
-- Polling frequency defaults to 30s; increase if CBS rate limits or your IP is slow.  
-- For public-facing overlays, review Supabase RLS policies before enabling writes.
+- **Background threads**: Real-time mode spawns daemon threads (30s polling interval)
+- **Main menu**: Returns immediately while threads run in background
+- **Status**: Active thread count shown in menu
+- **Exit**: All threads terminate when program exits
+
+**Data Sources**:
+- **Pick'em Results**: Scrapes CBS via Chrome, publishes changes to database only
+- **Game Outcomes**: Polls ESPN API, publishes to all enabled publishers
+
+## One-Off Ingestion
+
+For single snapshots without polling, select "Once" mode instead of "Real-Time".
+
+## Troubleshooting
+
+- **"No changes detected"**: Normal when data unchanged between polls
+- **Browser stays open**: Expected for CBS scraping during real-time mode
+- **Missing database updates**: Verify Supabase credentials in `.env`
+- **Rate limits**: Keep 30s default interval for CBS scraping
