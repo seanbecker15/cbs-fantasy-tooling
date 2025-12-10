@@ -11,6 +11,12 @@ Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs M
   ```
   
   **Note**: All required dependencies are specified in `pyproject.toml` and will be installed automatically. The `requirements.txt` file is kept for backwards compatibility and pinned versions but is not required for installation.
+  
+- For development, install dev dependencies:
+  ```bash
+  pip install -e '.[dev]'
+  ```
+  This installs `pytest`, `black`, and `ruff` for testing, formatting, and linting.
 - Create `.env` in the repo root:
   ```bash
   EMAIL=you@example.com           # CBS login (required for scraping)
@@ -46,6 +52,45 @@ Helper scripts wrap `launchctl`:
 ./scripts/unschedule-task.sh   # remove scheduled task
 ```
 Logs land in `/tmp/cbs-sports-scraper/`.
+
+### Development
+
+#### Using Task (Recommended)
+
+Install [Task](https://taskfile.dev/installation/) and run `task --list` to see all available commands.
+
+```bash
+# macOS: brew install go-task
+# Linux: sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+
+task --list    # Show all available tasks
+task check     # Run all checks before submitting a PR
+```
+
+#### Using Scripts Directly
+
+Helper scripts are also provided:
+
+```bash
+./scripts/test.sh      # Run tests
+./scripts/lint.sh      # Run linter with auto-fix
+./scripts/format.sh    # Format code
+```
+
+**Before submitting a PR**: `task check` or `./scripts/format.sh && ./scripts/lint.sh && ./scripts/test.sh`
+
+#### Continuous Integration
+The repository uses GitHub Actions to automatically run tests, linting, and formatting checks on:
+- All pushes to `main` branch
+- All pull requests targeting `main`
+
+The CI workflow:
+- Tests against Python 3.9, 3.10, 3.11, and 3.12
+- Runs on Ubuntu Linux
+- Caches dependencies for faster builds
+- **Fails PRs** if any check fails
+
+To avoid CI failures, always run the development scripts locally before pushing.
 
 ### Troubleshooting
 - Chrome/Selenium issues: ensure Chrome + matching chromedriver are installed.  
