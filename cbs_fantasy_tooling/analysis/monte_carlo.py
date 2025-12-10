@@ -4,18 +4,21 @@ Confidence Pool Strategy Simulator
 Main orchestration for running Monte Carlo simulations of confidence pool strategies.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from matplotlib import pyplot as plt
+import numpy as np
 import pandas as pd
 
-from cbs_fantasy_tooling.analysis.core.config import N_SIMS, get_field_composition
+from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
+
+from cbs_fantasy_tooling.analysis.core.config import N_SIMS, SHARP_BOOKS, SHARP_WEIGHT, get_field_composition
 from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 from cbs_fantasy_tooling.analysis.core.simulator import simulate_many_weeks
-from cbs_fantasy_tooling.analysis.odds.fetcher import get_weekly_game_probs_from_odds, fallback_game_probs
+from cbs_fantasy_tooling.analysis.odds.converter import consensus_moneyline_probs, rows_to_game_probs
 from cbs_fantasy_tooling.analysis.utils.validation import validate_slate
 from cbs_fantasy_tooling.analysis.utils.storage import save_predictions
-from cbs_fantasy_tooling.analysis.utils.time_helpers import get_current_nfl_week
 from cbs_fantasy_tooling.analysis.user.analysis import simulate_user_picks, analyze_user_picks
+from cbs_fantasy_tooling.utils.date import get_commence_time_from, get_commence_time_to, get_current_nfl_week
 
 
 def run_strategy_simulation(
@@ -38,12 +41,8 @@ def run_strategy_simulation(
     strategy_mix = get_field_composition()
 
     # Load odds data
-    try:
-        game_probs, week_mapping = get_weekly_game_probs_from_odds()
-        print(f"Loaded {len(game_probs)} games from The Odds API.")
-    except Exception as e:
-        print(f"[WARN] Odds fetch failed, using fallback slate. Reason: {str(e)}")
-        game_probs, week_mapping = fallback_game_probs()
+    game_probs, week_mapping = get_weekly_game_probs_from_odds()
+    print(f"Loaded {len(game_probs)} games from The Odds API.")
 
     # Validate slate
     validate_slate(week_mapping)
@@ -129,6 +128,24 @@ def run_strategy_simulation(
     display_recommendations(week_mapping, game_probs)
 
     return results
+
+def get_weekly_game_probs_from_odds() -> tuple[np.ndarray, list[dict]]:
+    """
+    Master function: fetch odds → consensus de-vig → GAME_PROBS with mapping.
+
+    Returns:
+        Tuple of (game_probs_array, week_mapping)
+
+    Raises:
+        RuntimeError: If API key not set or no games returned
+    """
+    from_date = get_commence_time_from()
+    to_date = get_commence_time_to()
+    events = fetch_odds(from_date, to_date)
+    rows = consensus_moneyline_probs(events, SHARP_BOOKS, SHARP_WEIGHT)
+    if not rows:
+        raise RuntimeError("No rows built from odds response. Check API key, region, time window, or timing.")
+    return rows_to_game_probs(rows)
 
 
 def display_results(df, user_summary):

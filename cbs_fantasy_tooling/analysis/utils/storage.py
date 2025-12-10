@@ -4,8 +4,8 @@ import os
 import json
 from datetime import datetime
 import numpy as np
-from cbs_fantasy_tooling.analysis.utils.time_helpers import get_current_nfl_week
 from cbs_fantasy_tooling.analysis.core.config import STRATEGY_CODES
+from cbs_fantasy_tooling.utils.date import get_current_nfl_week
 
 
 def save_predictions(strategy_name: str, picks: np.ndarray, confidence: np.ndarray,

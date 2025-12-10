@@ -10,12 +10,6 @@ LEAGUE_SIZE = 32
 N_OTHERS = LEAGUE_SIZE - 1
 N_SIMS = 20000  # reduce (e.g., 5000) if runs are slow on your machine
 
-# The Odds API configuration
-SPORT = "americanfootball_nfl"
-REGION = "us"  # us|uk|eu|au (controls which books)
-MARKETS = "h2h"  # moneylines for win probabilities
-ODDS_FORMAT = "american"  # american|decimal
-
 # Sharp books configuration
 # Books to overweight (The Odds API 'title' must contain one of these strings)
 SHARP_BOOKS = ("Pinnacle", "Circa")
@@ -29,10 +23,6 @@ BONUS_SPLIT_TIES = False  # if True, split bonuses equally among all tied player
 # Expected weekly game count sanity check (regular season typically 16; varies with byes/late-season)
 SLATE_MIN_GAMES = 12
 SLATE_MAX_GAMES = 18
-
-# Fallback settings for when API is unavailable
-FALLBACK_NUM_GAMES = 16
-FALLBACK_SEED = 42
 
 # Strategy codes for file naming
 STRATEGY_CODES = {

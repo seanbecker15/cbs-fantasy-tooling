@@ -14,7 +14,7 @@ from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pic
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.factory import create_publishers
-from cbs_fantasy_tooling.utils.date import get_weeks_since_start
+from cbs_fantasy_tooling.utils.date import get_current_nfl_week
 
 class MenuOption(str, Enum):
     INGEST = "ingest"
@@ -78,13 +78,13 @@ def ingest_flow(publishers: List[Publisher]):
 
     target_week = inquirer.text(
         message="Target week number",
-        default=str(get_weeks_since_start(config.week_one_start_date)),
+        default=str(get_current_nfl_week()),
     ).execute()
 
     if DataType.PICKEM_RESULTS in data_types:
         current_week = inquirer.text(
             message="Current week (for scraper dropdown)",
-            default=str(get_weeks_since_start(config.week_one_start_date) + 1),
+            default=str(get_current_nfl_week() + 1),
         ).execute()
 
         if mode == IngestMode.ONCE:
@@ -182,7 +182,7 @@ def analysis_flow():
     if AnalysisType.VISUALIZE_CONTRARIAN_PICKS in analysis_types:
         target_week_input = inquirer.text(
             message="Visualize contrarian picks for week number",
-            default=str(get_weeks_since_start(config.week_one_start_date)),
+            default=str(get_current_nfl_week()),
         ).execute()
 
         target_week = int(target_week_input)
@@ -217,5 +217,8 @@ def main():
             print("Invalid selection. Please try again.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nGoodbye!")
     
