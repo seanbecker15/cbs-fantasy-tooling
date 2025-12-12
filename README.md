@@ -1,87 +1,89 @@
-## CBS Fantasy Tooling
+# CBS Fantasy Tooling
 
-Scrapes CBS confidence-pool standings, pulls game outcomes from ESPN, and runs Monte Carlo strategy simulations using betting odds.
+NFL confidence pool simulator with automated data ingestion, Monte Carlo analysis, and competitor intelligence.
 
-### Setup
-- Python 3.9+ recommended.  
-- Create a venv and install editable package:
-  ```bash
-  python -m venv .venv && source .venv/bin/activate
-  pip install -e .
-  ```
-  
-  **Note**: All required dependencies are specified in `pyproject.toml` and will be installed automatically. The `requirements.txt` file is kept for backwards compatibility and pinned versions but is not required for installation.
-  
-- For development, install dev dependencies:
-  ```bash
-  pip install -e '.[dev]'
-  ```
-  This installs `pytest`, `black`, and `ruff` for testing, formatting, and linting.
-- Create `.env` in the repo root:
-  ```bash
-  EMAIL=you@example.com           # CBS login (required for scraping)
-  PASSWORD=your_password          # CBS password
-  THE_ODDS_API_KEY=your_key       # For strategy simulator
-  ENABLED_PUBLISHERS=file,gmail   # file is safe default; add database if Supabase is configured
-  GMAIL_FROM=you@example.com      # If using Gmail publisher (see docs/publishers.md)
-  SUPABASE_URL=...                # Optional: for database publisher + win analyzer
-  SUPABASE_KEY=...                # Optional: anon/service key
-  USER_NAME=Your Name             # Optional default for analyzers
-  WEEK_ONE_START_DATE=2025-09-02  # Used for week detection
-  ```
+## Quick Start
 
-### Daily Usage (Interactive CLI)
 ```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+cp .env.example .env  # Add your credentials
 cbs-scrape
-# OR
-python -m cbs_fantasy_tooling.main
 ```
-- **Ingest Data** → Pick'em Results (CBS scrape) and/or Game Outcomes (ESPN API).  
-- **Analyze Data** → Strategy simulator, competitor intelligence, or contrarian visualization.  
-Outputs are written to `out/` (CSV/JSON summaries, strategy predictions).
 
-### Outputs
-- `out/week_{n}_pickem_results.csv|json` — CBS scrape results.  
-- `out/week_{n}_game_results.json` — ESPN game outcomes.  
-- `out/week_{n}_strategy_summary.csv` + `out/week_{n}_predictions_{code}.json` — Monte Carlo strategies and recommendations.
+## What It Does
 
-### Scheduling (macOS)
-Helper scripts wrap `launchctl`:
+- **Scrapes** CBS Sports pick'em standings (Selenium)
+- **Fetches** ESPN game results + The Odds API moneylines
+- **Simulates** 20K+ Monte Carlo scenarios with de-vigged probabilities
+- **Analyzes** your picks vs built-in strategies (Chalk, Contrarian, etc.)
+- **Publishes** to file/email/Supabase
+
+## Main Workflows
+
+**Weekly strategy analysis:**
 ```bash
-./scripts/schedule-task.sh     # schedule Tuesday 9am run
-./scripts/unschedule-task.sh   # remove scheduled task
+cbs-scrape → Analyze Data → Strategy Simulator
 ```
-Logs land in `/tmp/cbs-sports-scraper/`.
 
-### Development
+**Data ingestion (once or real-time):**
+```bash
+cbs-scrape → Ingest Data → Pick'em/Games/Odds → Once/Real-Time
+```
 
-#### Using Task (Recommended)
-
-Install Task via [`mise`](https://github.com/jdx/mise) (recommended):
+## Required `.env` Variables
 
 ```bash
-mise use -g aqua:go-task/task@latest
-mise install
+# For scraping
+EMAIL=your_cbs_email
+PASSWORD=your_cbs_password
 
-task --list    # Show available tasks
-task check     # Run all checks before submitting a PR
+# For strategy analysis (recommended)
+THE_ODDS_API_KEY=your_key  # theoddsapi.com - 500 free/mo
+SEASON=2025
+WEEK_ONE_START_DATE=2025-09-02
+
+# For publishers (optional)
+GMAIL_FROM=you@gmail.com
+NOTIFICATION_TO=recipient@example.com
+SUPABASE_URL=https://xyz.supabase.co
+SUPABASE_KEY=your_key
 ```
 
-#### Continuous Integration
-The repository uses GitHub Actions to automatically run tests, linting, and formatting checks on:
-- All pushes to `main` branch
-- All pull requests targeting `main`
+## Documentation
 
-The CI workflow:
-- Tests against Python 3.9
-- Runs on Ubuntu Linux
-- Caches dependencies for faster builds
-- **Fails PRs** if any check fails
+- **[CLAUDE.md](CLAUDE.md)** - Agent guardrails
+- **[docs/usage.md](docs/usage.md)** - Simulator how-to
+- **[docs/win-analyzer.md](docs/win-analyzer.md)** - Win scenario tool
+- **[docs/data-sources.md](docs/data-sources.md)** - CBS/ESPN/Odds API details
+- **[docs/monte-carlo.md](docs/monte-carlo.md)** - Simulation internals
+- **[docs/publishers.md](docs/publishers.md)** - File/Gmail/Supabase output
+- **[docs/schemas.md](docs/schemas.md)** - Data formats
 
-To avoid CI failures, always run the development scripts locally before pushing.
+## Outputs
 
-### Troubleshooting
-- Chrome/Selenium issues: ensure Chrome + matching chromedriver are installed.  
-- Missing odds: check `THE_ODDS_API_KEY`.  
-- Database publisher failures: verify `SUPABASE_URL`/`SUPABASE_KEY` and table schema (docs/publishers.md).  
-- If the CLI real-time option is chosen, note that long-running polling is not yet wired; run manual real-time ingestion from `ingest/cbs_sports/scrape.py` (see docs/realtime.md).
+All results saved to `out/`:
+- `out/week_{N}_game_results.json` - ESPN game slate with live/final scores
+- `out/week_{N}_pickem_results.csv` - CBS pick'em leaderboard (tabular export)
+- `out/week_{N}_pickem_results.json` - CBS pick'em leaderboard (structured JSON)
+- `out/week_{N}_predictions_{strategy}.json` - Picks by strategy (`chalk`, `slight`, `aggress`, `shuffle`, `user` when provided)
+- `out/week_{N}_strategy_summary.csv` - Expected points per strategy
+- `out/week_{N}_aggressiveness_metrics.csv` - Aggressiveness + leverage metrics per player
+- `out/week_{N}_player_aggressiveness_rankings.png` - Aggressiveness leaderboard visualization
+
+## Common Issues
+
+| Error | Fix |
+|-------|-----|
+| "Only N games found" | Run before Thursday kickoff |
+| "Could not match team XYZ" | Use 3-letter abbreviations (BAL, BUF) |
+| "Odds fetch failed" | Check `THE_ODDS_API_KEY` in `.env` |
+
+## Scheduling (macOS)
+
+```bash
+./scripts/schedule-task.sh    # Tuesdays 9 AM
+./scripts/unschedule-task.sh  # Remove
+```
+
+Logs: `/tmp/cbs-sports-scraper/`

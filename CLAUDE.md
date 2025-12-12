@@ -45,16 +45,21 @@ To grow this file:
 
 **Key Commands:**
 ```bash
-# Setup (one-time)
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
+# First-time setup
+task setup            # create venv + install deps
 
-# Primary interface
-cbs-scrape                           # Interactive CLI menu
+# Taskfile shortcuts (agentic dev)
+task run              # interactive CLI menu
+task check            # format + lint + test
+task lint             # ruff --fix .
+task format           # black .
+task test             # pytest
 
-# Validation
-pytest                               # Run tests (if present)
-python -m cbs_fantasy_tooling.main   # Direct module entry (avoid; use CLI)
+# Escape hatches
+python -m cbs_fantasy_tooling.main      # direct module entry (fallback; prefer task run)
+pytest                                  # run tests
+ruff check --fix .                      # lint + auto-fix
+black .                                 # code formatting
 ```
 
 **Common Workflows:**
@@ -120,53 +125,43 @@ Analysis (monte_carlo.py, competitor_intelligence.py)
 
 ## External Docs & When To Read Them
 
-**Onboarding / setup:**
-- `README.md` — Minimal install + `.env` keys; how to run the interactive CLI.
+**Onboarding:**
+- `README.md` — Install, `.env` setup, quickstart commands
 
 **Core usage:**
-- `docs/usage.md` — Confidence pool simulator (odds → strategies → outputs). Use weekly. 
-- `docs/win-analyzer.md` — Supabase-driven “can I still win?” analysis; leaderboard mode. Use mid-week/live.
-- `docs/realtime.md` — How to run CBS polling loop into Supabase; notes on limitations.
+- `docs/usage.md` — Running the strategy simulator (use weekly for picks)
+- `docs/win-analyzer.md` — Win probability analysis (use mid-week/live tracking)
+- `docs/realtime.md` — Real-time polling mode via main CLI
 
-**Data + internals:**
-- `docs/data-sources.md` — Where data comes from (CBS, ESPN, The Odds API) and failure modes.
-- `docs/monte-carlo.md` — Strategy definitions, tunables (`STRATEGY_MIX`, `N_SIMS`, sharp weighting).
+**Data sources:**
+- `docs/data-sources.md` — CBS/ESPN/Odds API details and failure modes
+- **When**: Debugging API failures or adding new data sources
 
-**Outputs & delivery:**
-- `docs/publishers.md` — File/Gmail/Supabase publishers and required env/config.
-- `docs/schemas.md` — File formats and Supabase table columns for integrating consumers.
+**Simulation internals:**
+- `docs/monte-carlo.md` — Strategy definitions, tunables (`STRATEGY_MIX`, `N_SIMS`)
+- **When**: Modifying strategy logic or tuning simulation parameters
 
-**Roadmap:**
-- `docs/streaming-tasks.md` — Short task list to populate `game_status` and power overlays.
+**Output configuration:**
+- `docs/publishers.md` — File/Gmail/Supabase publisher setup
+- **When**: Configuring email delivery or database integration
+- `docs/schemas.md` — Data formats (JSON, CSV, Supabase tables)
+- **When**: Consuming output files programmatically
 
-## Wrapper Opportunities (Future Improvements)
+**Future features:**
+- `docs/streaming-tasks.md` — Task list for `game_status` overlay implementation
 
-**Instead of documenting complex commands, create wrappers:**
+## Potential Automation Opportunities
 
-1. **Testing scraper without full ingestion:**
-   ```bash
-   # Current: long selenium debugging process
-   # Proposed: ./scripts/test-scraper.sh --week 14 --dry-run
-   ```
+If you find yourself repeating multi-step CLI workflows, consider adding wrapper scripts:
 
-2. **Bulk historical data fetch:**
-   ```bash
-   # Current: manually loop through weeks in CLI
-   # Proposed: ./scripts/backfill-weeks.sh 1-17
-   ```
+**Examples:**
+- Bulk historical backfill (loop through weeks 1-17)
+- Scraper dry-run mode (test selectors without publishing)
+- Non-interactive strategy run (picks via CLI args instead of prompts)
 
-3. **Strategy validation:**
-   ```bash
-   # Current: navigate CLI menus each time
-   # Proposed: ./scripts/run-strategy.sh --picks "Ravens,Bills,..." --compare
-   ```
-
-**When to add a wrapper:**
-- If you document a command >2 lines with complex flags
-- If a workflow requires >3 manual CLI menu selections
-- If you need to run the same operation across multiple weeks/seasons
+**Guideline**: Add a wrapper if a workflow requires >3 manual menu selections or complex flag combinations.
 
 ---
 
-**Last Updated**: 2025-12-09
+**Last Updated**: 2025-12-11
 **For questions**: Check git history or ask the human (me).
