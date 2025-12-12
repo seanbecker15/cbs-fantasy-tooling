@@ -10,6 +10,8 @@ from cbs_fantasy_tooling.analysis import (
     run_strategy_simulation,
     analyze_competitors,
     analyze_contrarian_picks,
+    analyze_win_scenarios,
+    analyze_win_leaderboard,
 )
 from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pickem_results
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
@@ -38,6 +40,8 @@ class AnalysisType(str, Enum):
     CONFIDENCE_POOL_STRATEGY = "confidence_pool_strategy"
     COMPETITOR_INTELLIGENCE = "competitor_intelligence"
     VISUALIZE_CONTRARIAN_PICKS = "visualize_contrarian_picks"
+    WIN_SCENARIO = "win_scenario"
+    WIN_LEADERBOARD = "win_leaderboard"
 
 
 # Global list to track background ingestion threads
@@ -160,6 +164,8 @@ def analysis_flow():
             Choice(
                 value=AnalysisType.VISUALIZE_CONTRARIAN_PICKS, name="Visualize Contrarian Picks"
             ),
+            Choice(value=AnalysisType.WIN_SCENARIO, name="Win Scenario Analysis"),
+            Choice(value=AnalysisType.WIN_LEADERBOARD, name="Win Probability Leaderboard"),
         ],
         default=[AnalysisType.CONFIDENCE_POOL_STRATEGY],
     ).execute()
@@ -226,6 +232,47 @@ def analysis_flow():
         print("=" * 60)
 
         analyze_contrarian_picks(week=target_week)
+
+    # Handle Win Scenario Analysis
+    if AnalysisType.WIN_SCENARIO in analysis_types:
+        target_week_input = inquirer.text(
+            message="Analyze win scenarios for week number",
+            default=str(get_current_nfl_week()),
+        ).execute()
+
+        player_name_input = inquirer.text(
+            message="Player name",
+            default=config.user_name or "",
+        ).execute()
+
+        detailed = inquirer.confirm(
+            message="Show detailed winning combinations and meta-analysis?",
+            default=False,
+        ).execute()
+
+        target_week = int(target_week_input)
+        player_name = player_name_input.strip()
+
+        print("\n" + "=" * 60)
+        print("WIN SCENARIO ANALYSIS")
+        print("=" * 60)
+
+        analyze_win_scenarios(week=target_week, player_name=player_name, detailed=detailed)
+
+    # Handle Win Leaderboard
+    if AnalysisType.WIN_LEADERBOARD in analysis_types:
+        target_week_input = inquirer.text(
+            message="Analyze win leaderboard for week number",
+            default=str(get_current_nfl_week()),
+        ).execute()
+
+        target_week = int(target_week_input)
+
+        print("\n" + "=" * 60)
+        print("WIN PROBABILITY LEADERBOARD")
+        print("=" * 60)
+
+        analyze_win_leaderboard(week=target_week)
 
     print("\nReturning to main menu...\n")
 

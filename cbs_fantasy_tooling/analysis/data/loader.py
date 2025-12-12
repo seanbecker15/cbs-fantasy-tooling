@@ -21,6 +21,8 @@ from datetime import datetime
 
 import pandas as pd
 
+from cbs_fantasy_tooling.publishers.file import JSON_FILENAMES
+
 
 @dataclass
 class WeekData:
@@ -66,7 +68,7 @@ class CompetitorDataLoader:
         Scans for files matching pattern: week_{N}_results_{timestamp}.json
         Populates self.weeks_data dictionary keyed by week number.
         """
-        pattern = os.path.join(self.data_dir, "week_*_results_*.json")
+        pattern = os.path.join(self.data_dir, JSON_FILENAMES["pickem_results"]("*"))
         files = sorted(glob.glob(pattern))
 
         if not files:

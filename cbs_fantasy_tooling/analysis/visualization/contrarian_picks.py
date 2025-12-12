@@ -21,6 +21,7 @@ import matplotlib
 
 from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.analysis.data.loader import CompetitorDataLoader
+from cbs_fantasy_tooling.publishers.file import JSON_FILENAMES
 
 # ============================================================================
 # WEEK UTILITIES
@@ -38,22 +39,9 @@ def check_week_data_exists(week: int, data_dir: str = "../out") -> bool:
     Returns:
         True if data exists, False otherwise
     """
-    pattern = os.path.join(data_dir, f"week_{week}_results_*.json")
+    pattern = os.path.join(data_dir, JSON_FILENAMES["pickem_results"](week))
     files = glob.glob(pattern)
     return len(files) > 0
-
-
-def get_scraper_command(week: int) -> str:
-    """
-    Get the command to run the scraper for a specific week.
-
-    Args:
-        week: NFL week number
-
-    Returns:
-        Command string to run scraper
-    """
-    return f"cd ../app && python main.py --week {week}"
 
 
 # ============================================================================
@@ -413,7 +401,7 @@ def analyze_contrarian_picks(week: int):
     # Check if data exists
     if not check_week_data_exists(week, data_dir):
         print(f"❌ Picks unavailable for week {week}.")
-        print(f"\nRun scraper: {get_scraper_command(week)}")
+        print(f"\nRun ingest command to fetch data for week {week}")
         sys.exit(1)
 
     # Calculate metrics

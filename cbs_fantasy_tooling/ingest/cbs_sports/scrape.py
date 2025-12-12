@@ -378,18 +378,19 @@ def publish_results(results: PickemResults, publishers: list[Publisher]):
     success_count = 0
     errors = []
 
-    for name, publisher in publishers:
-        print(f"\nPublishing via {name}...")
+    for publisher in publishers:
+        publisher_name = publisher.name
+        print(f"\nPublishing via {publisher_name}...")
         try:
-            if publisher.publish(results):
-                print(f"✓ {name} publisher succeeded")
+            if publisher.publish_pickem_results(results):
+                print(f"✓ {publisher_name} publisher succeeded")
                 success_count += 1
             else:
-                print(f"✗ {name} publisher failed")
-                errors.append(name)
+                print(f"✗ {publisher_name} publisher failed")
+                errors.append(publisher_name)
         except Exception as e:
-            print(f"✗ {name} publisher error: {e}")
-            errors.append(name)
+            print(f"✗ {publisher_name} publisher error: {e}")
+            errors.append(publisher_name)
 
     print(f"\nPublication summary: {success_count}/{len(publishers)} publishers succeeded")
     if errors:
