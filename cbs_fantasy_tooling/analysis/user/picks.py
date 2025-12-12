@@ -1,6 +1,5 @@
 """User pick parsing and validation."""
 
-from difflib import get_close_matches
 import numpy as np
 
 
@@ -24,11 +23,6 @@ def normalize_team_name(user_team: str, available_teams: list[str]) -> str:
     # Direct match first
     for team in available_teams:
         if user_team.lower() == team.lower():
-            return team
-
-    # Try partial matching (e.g., "Ravens" -> "Baltimore Ravens")
-    for team in available_teams:
-        if user_team.lower() in team.lower() or team.lower() in user_team.lower():
             return team
 
     # Common abbreviations mapping
@@ -74,11 +68,12 @@ def normalize_team_name(user_team: str, available_teams: list[str]) -> str:
             for team in available_teams:
                 if full_name in team.lower():
                     return team
+                
 
-    # Fuzzy matching as last resort
-    matches = get_close_matches(user_team, available_teams, n=1, cutoff=0.6)
-    if matches:
-        return matches[0]
+    # Try partial matching (e.g., "Ravens" -> "Baltimore Ravens")
+    for team in available_teams:
+        if user_team.lower() in team.lower() or team.lower() in user_team.lower():
+            return team
 
     raise ValueError(f"Could not match team '{user_team}' to available teams: {available_teams}")
 
