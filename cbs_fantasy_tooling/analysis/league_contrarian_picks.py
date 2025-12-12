@@ -18,6 +18,7 @@ import glob
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
+import numpy as np
 
 from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.analysis.data.loader import CompetitorDataLoader
@@ -456,5 +457,7 @@ def analyze_contrarian_picks(week: int):
     print(
         f"  Most Conservative: {metrics_df.iloc[-1]['player_name']} ({metrics_df.iloc[-1]['total_aggressiveness']:.2f})"
     )
+    print(f"  Average Score: {metrics_df['total_aggressiveness'].mean():.2f}")
+    print(f"  Most Conservative: {metrics_df.iloc[-1]['player_name']} ({metrics_df.iloc[-1]['total_aggressiveness']:.2f})")
     print(f"  Average Score: {metrics_df['total_aggressiveness'].mean():.2f}")
     print(f"{'='*120}\n")

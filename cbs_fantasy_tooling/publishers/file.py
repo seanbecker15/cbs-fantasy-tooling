@@ -22,6 +22,7 @@ CSV_FILENAMES = {
 CHART_FILENAMES = {
     "win_leaderboard": lambda week: f"week_{week}_win_leaderboard.png",
     "user_win_pct": lambda player_slug: f"{player_slug}_win_pct.png",
+    "player_style": lambda suffix: f"player_style_{suffix}.png",
 }
 
 

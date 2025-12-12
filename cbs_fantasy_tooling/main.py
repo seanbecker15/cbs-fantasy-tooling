@@ -13,6 +13,7 @@ from cbs_fantasy_tooling.analysis import (
     analyze_win_scenarios,
     analyze_win_leaderboard,
     analyze_user_win_percentage,
+    analyze_player_style,
 )
 from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pickem_results
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
@@ -44,6 +45,7 @@ class AnalysisType(str, Enum):
     WIN_SCENARIO = "win_scenario"
     WIN_LEADERBOARD = "win_leaderboard"
     USER_WIN_PCT = "user_win_pct"
+    USER_CONTRARIAN_STYLE = "user_contrarian_style"
 
 
 # Global list to track background ingestion threads
@@ -177,6 +179,7 @@ def analysis_flow():
             Choice(value=AnalysisType.WIN_SCENARIO, name="Win Scenario Analysis"),
             Choice(value=AnalysisType.WIN_LEADERBOARD, name="Win Probability Leaderboard"),
             Choice(value=AnalysisType.USER_WIN_PCT, name="User Win% Trend"),
+            Choice(value=AnalysisType.USER_CONTRARIAN_STYLE, name="Player Contrarian Style"),
         ],
         default=[AnalysisType.CONFIDENCE_POOL_STRATEGY],
     ).execute()
@@ -298,6 +301,21 @@ def analysis_flow():
         print("=" * 60)
 
         analyze_user_win_percentage(player_name=player_name)
+
+    if AnalysisType.USER_CONTRARIAN_STYLE in analysis_types:
+        player_list_input = inquirer.text(
+            message="Player name(s) (comma-separated; leave blank for USER_NAME)",
+            default=config.user_name or "",
+        ).execute()
+
+        players = [p.strip() for p in player_list_input.split(",") if p.strip()]
+        players = players if players else None
+
+        print("\n" + "=" * 60)
+        print("PLAYER CONTRARIAN STYLE")
+        print("=" * 60)
+
+        analyze_player_style(players=players)
 
     print("\nReturning to main menu...\n")
 
