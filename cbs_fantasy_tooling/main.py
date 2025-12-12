@@ -12,6 +12,7 @@ from cbs_fantasy_tooling.analysis import (
     analyze_contrarian_picks,
     analyze_win_scenarios,
     analyze_win_leaderboard,
+    analyze_user_win_percentage,
 )
 from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pickem_results
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
@@ -42,6 +43,7 @@ class AnalysisType(str, Enum):
     VISUALIZE_CONTRARIAN_PICKS = "visualize_contrarian_picks"
     WIN_SCENARIO = "win_scenario"
     WIN_LEADERBOARD = "win_leaderboard"
+    USER_WIN_PCT = "user_win_pct"
 
 
 # Global list to track background ingestion threads
@@ -116,10 +118,18 @@ def ingest_flow(publishers: List[Publisher]):
             default=str(get_current_nfl_week() + 1),
         ).execute()
 
+        scrape_all_weeks = False
+        if mode == IngestMode.ONCE:
+            scrape_all_weeks = inquirer.confirm(
+                message="Scrape all weeks down to target (walk dropdown)?",
+                default=False,
+            ).execute()
+
         if mode == IngestMode.ONCE:
             params = PickemIngestParams(
                 target_week=int(target_week),
                 curr_week=int(current_week),
+                scrape_all_weeks=scrape_all_weeks,
             )
             ingest_pickem_results(params, publishers)
         else:
@@ -166,6 +176,7 @@ def analysis_flow():
             ),
             Choice(value=AnalysisType.WIN_SCENARIO, name="Win Scenario Analysis"),
             Choice(value=AnalysisType.WIN_LEADERBOARD, name="Win Probability Leaderboard"),
+            Choice(value=AnalysisType.USER_WIN_PCT, name="User Win% Trend"),
         ],
         default=[AnalysisType.CONFIDENCE_POOL_STRATEGY],
     ).execute()
@@ -273,6 +284,20 @@ def analysis_flow():
         print("=" * 60)
 
         analyze_win_leaderboard(week=target_week)
+
+    if AnalysisType.USER_WIN_PCT in analysis_types:
+        player_name_input = inquirer.text(
+            message="Player name (default USER_NAME)",
+            default=config.user_name or "",
+        ).execute()
+
+        player_name = player_name_input.strip() or None
+
+        print("\n" + "=" * 60)
+        print("USER WIN% TREND")
+        print("=" * 60)
+
+        analyze_user_win_percentage(player_name=player_name)
 
     print("\nReturning to main menu...\n")
 

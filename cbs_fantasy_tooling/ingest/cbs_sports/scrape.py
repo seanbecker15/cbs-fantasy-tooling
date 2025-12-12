@@ -187,19 +187,42 @@ def print_most_points(results):
 class PickemIngestParams:
     curr_week: int
     target_week: int
+    scrape_all_weeks: bool = False
     poll_interval: int | None = None
 
 
 def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher]):
     try:
-        pickem_result_items = run_scraper(params, publishers)
-        pickem_results = PickemResults(pickem_result_items, params.target_week)
-        publish_results(pickem_results, publishers)
+        print(
+            f"[ingest_pickem_results] curr_week={params.curr_week}, "
+            f"target_week={params.target_week}, scrape_all_weeks={params.scrape_all_weeks}, "
+            f"poll_interval={params.poll_interval}"
+        )
+        scraped = run_scraper(params, publishers)
+
+        if params.scrape_all_weeks:
+            if not scraped:
+                raise Exception("No results scraped for any week.")
+            for week_num, pickem_result_items in scraped:
+                print(f"\nPublishing results for Week {week_num}... ({len(pickem_result_items)} rows)")
+                pickem_results = PickemResults(pickem_result_items, week_num)
+                publish_results(pickem_results, publishers)
+        else:
+            if not scraped:
+                print("[ingest_pickem_results] No results scraped.")
+                print("No results scraped.")
+                return
+            week_num, pickem_result_items = scraped[0]
+            print(f"\nPublishing results for Week {week_num}... ({len(pickem_result_items)} rows)")
+            pickem_results = PickemResults(pickem_result_items, week_num)
+            publish_results(pickem_results, publishers)
     except Exception as e:
         print(f"Error occurred during scraping or publishing: {e}")
 
 
-def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list[PickemResult]:
+def run_scraper(
+    params: PickemIngestParams, publishers: list[Publisher]
+) -> list[tuple[int, list[PickemResult]]]:
     email = config.email
     password = config.password
 
@@ -211,35 +234,74 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
     navigate_login(driver, max_wait_time, email, password)
     wait_for_user_input(30)
 
-    i = params.curr_week
     succeeded = False
 
     # Sometimes on first load the page doesn't finish loading
     driver.refresh()
 
-    while i >= params.target_week and not succeeded:
+    # helper to jump between weeks via dropdown
+    def goto_week(curr_week: int, desired_week: int) -> bool:
         try:
-            print(f"Looking for dropdown with text 'Week {i}'")
-            navigate_standings(driver, max_wait_time, i, params.target_week)
+            print(
+                f"Looking for dropdown with text 'Week {curr_week}' → 'Week {desired_week}'"
+            )
+            navigate_standings(driver, max_wait_time, curr_week, desired_week)
             sleep(2)
-            succeeded = True
-            break
+            print(f"✓ Navigated to Week {desired_week}")
+            return True
         except TimeoutException:
-            print(f"Could not find dropdown with text 'Week {i}'.")
-            i -= 1
-
-    if not succeeded:
-        raise Exception(
-            f"Could not find week dropdown. Searched {params.curr_week}..{params.target_week}."
-        )
-
-    sleep(5)
-
-    print(f"\n✓ Successfully navigated to Week {params.target_week}")
-
-    poll_interval = params.poll_interval
+            print(f"Could not navigate from Week {curr_week} to Week {desired_week}.")
+            return False
 
     try:
+        if params.scrape_all_weeks:
+            all_results: list[tuple[int, list[PickemResult]]] = []
+            current_display_week = params.curr_week
+
+            print(
+                f"[run_scraper] Walking weeks from {params.curr_week} down to {params.target_week}"
+            )
+
+            for week_num in range(params.target_week, 0, -1):
+                if not goto_week(current_display_week, week_num):
+                    print(f"[run_scraper] Skipping week {week_num} due to navigation failure")
+                    continue
+
+                sleep(5)
+                results = scrape_standings(driver, max_wait_time, False)
+                if results:
+                    print(f"✓ Scraped Week {week_num}: {len(results)} player rows")
+                    all_results.append((week_num, results))
+                else:
+                    print(f"⚠ No results found for Week {week_num}")
+
+                current_display_week = week_num
+
+            if not all_results:
+                raise Exception("Failed to scrape any weeks in range.")
+
+            print(f"[run_scraper] Completed multi-week scrape: {len(all_results)} weeks collected")
+            return all_results
+
+        # Single-week flow
+        week_iterator = params.curr_week
+        while week_iterator >= params.target_week and not succeeded:
+            if goto_week(week_iterator, params.target_week):
+                succeeded = True
+                break
+            week_iterator -= 1
+
+        if not succeeded:
+            raise Exception(
+                f"Could not find week dropdown. Searched {params.curr_week}..{params.target_week}."
+            )
+
+        sleep(5)
+
+        print(f"\n✓ Successfully navigated to Week {params.target_week}")
+
+        poll_interval = params.poll_interval
+
         if not poll_interval or poll_interval <= 0:
             results = scrape_standings(driver, max_wait_time, True)
             print_csv(results)
@@ -247,7 +309,8 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
             print_most_points(results)
             if not results or len(results) == 0:
                 raise Exception("No results found.")
-            return results
+            print(f"[run_scraper] Scraped {len(results)} rows for Week {params.target_week}")
+            return [(params.target_week, results)]
 
         print("\nStarting realtime polling...")
         print(f"Poll interval: {poll_interval}s (refreshing page between polls)")
@@ -267,8 +330,7 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
                 driver.refresh()
                 print(f"Waiting {half_poll_interval}s for page to stabilize...")
 
-                # Wait half the poll interval, checking for exit signal
-                for i in range(half_poll_interval):
+                for week_iterator in range(half_poll_interval):
                     if wait_for_exit_signal(1):
                         print("\n✓ Exit signal received")
                         return
@@ -279,7 +341,6 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
             )
 
             try:
-                # Scrape current data
                 current_results = scrape_standings(driver, max_wait_time, False)
 
                 if not current_results or len(current_results) == 0:
@@ -287,7 +348,6 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
                 else:
                     print(f"✓ Scraped {len(current_results)} player results")
 
-                    # Check if data changed using deep comparison
                     comparison = compare_results(previous_results, current_results)
 
                     if previous_results is None:
@@ -295,7 +355,7 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
                         on_update(params, publishers, current_results)
                     elif comparison["changed"]:
                         print(f"  ⚡ CHANGE DETECTED - {comparison['summary']}")
-                        for change in comparison["changes"][:5]:  # Show first 5 changes
+                        for change in comparison["changes"][:5]:
                             print(f"    • {change}")
                         if len(comparison["changes"]) > 5:
                             print(f"    ... and {len(comparison['changes']) - 5} more changes")
@@ -311,13 +371,12 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
 
                 traceback.print_exc()
 
-            # Wait after scraping before next poll (half the poll interval)
             print(f"\nWaiting {half_poll_interval}s until next refresh (Press Enter to exit)...")
 
-            for i in range(half_poll_interval):
+            for week_iterator in range(half_poll_interval):
                 if wait_for_exit_signal():
                     print("\n✓ Exit signal received")
-                    return
+                    return []
                 sleep(1)
 
     except KeyboardInterrupt:
@@ -331,6 +390,7 @@ def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list
         print("\nClosing browser...")
         driver.quit()
         print("✓ Browser closed")
+    return []
 
 
 def on_update(params: PickemIngestParams, publishers: list[Publisher], results: list[PickemResult]):
@@ -397,7 +457,7 @@ def publish_results(results: PickemResults, publishers: list[Publisher]):
         print(f"Failed publishers: {', '.join(errors)}")
 
 
-def wait_for_exit_signal() -> bool:
+def wait_for_exit_signal(_timeout_seconds: int | None = None) -> bool:
     """
     Wait for user input with a timeout. Non-blocking check for exit signal.
 
