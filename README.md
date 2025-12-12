@@ -63,13 +63,13 @@ SUPABASE_KEY=your_key
 ## Outputs
 
 All results saved to `OUTPUT_DIR` (default `data/`):
-- `out/week_{N}_game_results.json` - ESPN game slate with live/final scores
-- `out/week_{N}_pickem_results.csv` - CBS pick'em leaderboard (tabular export)
-- `out/week_{N}_pickem_results.json` - CBS pick'em leaderboard (structured JSON)
-- `out/week_{N}_predictions_{strategy}.json` - Picks by strategy (`chalk`, `slight`, `aggress`, `shuffle`, `user` when provided)
-- `out/week_{N}_strategy_summary.csv` - Expected points per strategy
-- `out/week_{N}_aggressiveness_metrics.csv` - Aggressiveness + leverage metrics per player
-- `out/week_{N}_player_aggressiveness_rankings.png` - Aggressiveness leaderboard visualization
+- `data/week_{N}_game_results.json` - ESPN game slate with live/final scores
+- `data/week_{N}_pickem_results.csv` - CBS pick'em leaderboard (tabular export)
+- `data/week_{N}_pickem_results.json` - CBS pick'em leaderboard (structured JSON)
+- `data/week_{N}_predictions_{strategy}.json` - Picks by strategy (`chalk`, `slight`, `aggress`, `shuffle`, `user` when provided)
+- `data/week_{N}_strategy_summary.csv` - Expected points per strategy
+- `data/week_{N}_aggressiveness_metrics.csv` - Aggressiveness + leverage metrics per player
+- `data/week_{N}_player_aggressiveness_rankings.png` - Aggressiveness leaderboard visualization
 
 ## Common Issues
 
