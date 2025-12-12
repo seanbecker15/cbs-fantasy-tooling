@@ -10,13 +10,13 @@ Answer: “What needs to happen for me to win this week?” Calculates winning s
 ## Run Commands
 ```bash
 # Single player (uses USER_NAME if --player omitted)
-python -m cbs_fantasy_tooling.analysis.win_scenario_analyzer --week 12 --player "Your Name"
+python -m cbs_fantasy_tooling.analysis.win_scenario --week 12 --player "Your Name"
 
 # Detailed paths to victory (top 20 combos + TL;DR)
-python -m cbs_fantasy_tooling.analysis.win_scenario_analyzer --week 12 --player "Your Name" --detailed
+python -m cbs_fantasy_tooling.analysis.win_scenario --week 12 --player "Your Name" --detailed
 
 # Leaderboard for everyone in the table
-python -m cbs_fantasy_tooling.analysis.win_scenario_analyzer --week 12 --all-players
+python -m cbs_fantasy_tooling.analysis.win_scenario --week 12 --all-players
 ```
 
 ## Reading the Output

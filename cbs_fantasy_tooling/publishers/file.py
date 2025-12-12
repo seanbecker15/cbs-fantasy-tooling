@@ -19,6 +19,11 @@ CSV_FILENAMES = {
     "strategy_summary": lambda week: f"week_{week}_strategy_summary.csv",
 }
 
+CHART_FILENAMES = {
+    "win_leaderboard": lambda week: f"week_{week}_win_leaderboard.png",
+    "user_win_pct": lambda player_slug: f"{player_slug}_win_pct.png",
+}
+
 
 class FilePublisher(Publisher):
     """Publisher that saves results to local files"""

@@ -10,9 +10,11 @@ import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
+from matplotlib import pyplot as plt
 from supabase import Client, create_client
 
 from cbs_fantasy_tooling.config import config
+from cbs_fantasy_tooling.publishers.file import CHART_FILENAMES
 
 
 @dataclass
@@ -432,6 +434,52 @@ class WinScenarioAnalyzer:
         }
 
 
+def _save_win_leaderboard_chart(result: Dict) -> Optional[str]:
+    """Save a win probability leaderboard chart and return the filepath."""
+    leaderboard = result.get("leaderboard", [])
+    if not leaderboard:
+        return None
+
+    def _sanitize(label: str) -> str:
+        # Escape mathtext-sensitive characters so names like "G-Money$$" render.
+        return label.replace("$", r"\$")
+
+    subset = leaderboard  # include all players
+    players = [_sanitize(entry["player"]) for entry in subset][::-1]  # highest probability on top
+    probs = [entry["win_probability"] * 100 for entry in subset][::-1]
+
+    fig_height = 0.6 * len(subset) + 1.5
+    fig, ax = plt.subplots(figsize=(9, fig_height))
+
+    bars = ax.barh(players, probs, color="#4B9CD3", edgecolor="#1E467B")
+    max_prob = max(probs) if probs else 0
+    ax.set_xlim(0, max(100, max_prob * 1.1))
+    ax.set_xlabel("Win Probability (%)")
+    ax.set_title(
+        f"Win Probability — Week {result['week']} ({result['pending_games']} pending games)"
+    )
+    ax.grid(axis="x", linestyle="--", alpha=0.3)
+
+    for bar, pct in zip(bars, probs):
+        ax.text(
+            pct + 0.5,
+            bar.get_y() + bar.get_height() / 2,
+            f"{pct:.1f}%",
+            va="center",
+            ha="left",
+            fontsize=10,
+        )
+
+    plt.tight_layout()
+
+    filename = CHART_FILENAMES["win_leaderboard"](result["week"])
+    os.makedirs(config.output_dir, exist_ok=True)
+    chart_path = os.path.join(config.output_dir, filename)
+    plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return chart_path
+
+
 def analyze_win_scenarios(week: int, player_name: str, detailed: bool = False):
     """Analyze win scenarios for a player.
 
@@ -589,5 +637,9 @@ def analyze_win_leaderboard(week: int):
             f"{idx:<6}{entry['player']:<25}{entry['current_points']:<10}"
             f"{scenarios:<20}{entry['win_percentage']:<12}"
         )
+
+    chart_path = _save_win_leaderboard_chart(result)
+    if chart_path:
+        print(f"\nLeaderboard chart saved to: {chart_path}")
 
     print("=" * 70)
