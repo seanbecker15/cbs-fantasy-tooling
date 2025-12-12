@@ -5,7 +5,7 @@
 .env
 
 # Output directories
-out
+data/
 
 # Python cache files
 __pycache__/
