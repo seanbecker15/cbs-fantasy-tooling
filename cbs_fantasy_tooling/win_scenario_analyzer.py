@@ -9,15 +9,13 @@ Usage:
     python app/win_scenario_analyzer.py --week 12 --player "Your Name" --detailed
 """
 
-import argparse
 import os
-import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 
-from dotenv import load_dotenv
 from supabase import create_client, Client
+from cbs_fantasy_tooling.config import config
 
 
 @dataclass
@@ -184,7 +182,7 @@ class WinScenarioAnalyzer:
         import glob
         import json
 
-        output_dir = os.getenv("OUTPUT_DIR", "out")
+        output_dir = config.output_dir
         pattern = f"{output_dir}/week_{week}_predictions_chalk_*.json"
         files = glob.glob(pattern)
 
@@ -627,206 +625,3 @@ class WinScenarioAnalyzer:
             "total_players": len(leaderboard),
             "leaderboard": leaderboard,
         }
-
-
-def main():
-    """CLI entry point."""
-    parser = argparse.ArgumentParser(description="Analyze win scenarios for confidence pool")
-    parser.add_argument("--week", type=int, required=True, help="Week number to analyze")
-    parser.add_argument(
-        "--player", type=str, help="Player name to analyze (defaults to USER_NAME from .env)"
-    )
-    parser.add_argument(
-        "--detailed", action="store_true", help="Show detailed winning combinations"
-    )
-    parser.add_argument(
-        "--all-players",
-        action="store_true",
-        help="Analyze all players and show leaderboard (ignores --player flag)",
-    )
-    parser.add_argument("--season", type=int, help="Season year (defaults to current year)")
-
-    args = parser.parse_args()
-
-    # Load environment variables
-    load_dotenv()
-
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-
-    if not supabase_url or not supabase_key:
-        print("Error: SUPABASE_URL and SUPABASE_KEY must be set in .env file")
-        sys.exit(1)
-
-    # Create analyzer
-    analyzer = WinScenarioAnalyzer(
-        supabase_url=supabase_url, supabase_key=supabase_key, season=args.season
-    )
-
-    # Handle all-players mode
-    if args.all_players:
-        result = analyzer.analyze_all_players_leaderboard(week=args.week)
-
-        if "error" in result:
-            print(f"Error: {result['error']}")
-            sys.exit(1)
-
-        # Display leaderboard
-        print("=" * 70)
-        print(f"WIN PROBABILITY LEADERBOARD - Week {result['week']}")
-        print("=" * 70)
-        print(f"Season: {result['season']}")
-        print(f"Pending Games: {result['pending_games']}")
-        print(f"Total Players: {result['total_players']}")
-        print()
-        print(f"{'Rank':<6}{'Player':<25}{'Current':<10}{'Win Scenarios':<20}{'Probability':<12}")
-        print("-" * 70)
-
-        for idx, entry in enumerate(result["leaderboard"], 1):
-            scenarios = f"{entry['winning_scenarios']:,} / {entry['total_scenarios']:,}"
-            print(
-                f"{idx:<6}{entry['player']:<25}{entry['current_points']:<10}{scenarios:<20}{entry['win_percentage']:<12}"
-            )
-
-        print("=" * 70)
-        sys.exit(0)
-
-    # Single-player mode
-    player_name = args.player or os.getenv("USER_NAME")
-    if not player_name:
-        print("Error: --player must be specified or USER_NAME must be set in .env")
-        sys.exit(1)
-
-    # Run analysis
-    result = analyzer.analyze_win_scenarios(
-        week=args.week, target_player=player_name, detailed=args.detailed
-    )
-
-    # Display results
-    if "error" in result:
-        print(f"Error: {result['error']}")
-        sys.exit(1)
-
-    print("=" * 60)
-    print(f"WIN SCENARIO ANALYSIS - Week {result['week']}")
-    print("=" * 60)
-    print(f"Player: {result['player']}")
-    print(f"Current Points: {result['current_points']}")
-    print()
-
-    # Display pending games with formatted picks
-    if "pending_games_formatted" in result and result["pending_games_formatted"]:
-        print(f"Remaining Games ({result['pending_games']}):")
-        for game in result["pending_games_formatted"]:
-            print(f"  {game}")
-        print()
-
-    print(f"Total Possible Scenarios: {result['total_scenarios']:,}")
-    print(f"Winning Scenarios: {result['winning_scenarios']:,}")
-    print()
-
-    # Display probability metrics
-    if result.get("using_actual_odds"):
-        print(f"Win Probability (Weighted by Odds): {result['weighted_win_percentage']}")
-        print(f"Win Probability (Naive 50/50):      {result['naive_win_percentage']}")
-        print()
-        print("NOTE: Using actual game probabilities from odds data")
-    else:
-        print(f"Win Probability (50/50 Assumption): {result['win_percentage']}")
-        print()
-        print("NOTE: Assuming all games are 50/50 coin flips")
-
-    print("=" * 60)
-
-    if args.detailed and "winning_combinations" in result:
-        print()
-        print("SAMPLE WINNING COMBINATIONS:")
-        print("-" * 60)
-        for idx, combo in enumerate(result["winning_combinations"], 1):
-            print(
-                f"\n#{idx}: You score {combo['target_total']} pts, opponents max {combo['max_opponent_total']} pts"
-            )
-
-            if combo["must_win"]:
-                print("  Must win:")
-                for win in combo["must_win"]:
-                    print(f"    - {win}")
-
-            if combo["can_lose"]:
-                print("  Must lose:")
-                for loss in combo["can_lose"]:
-                    print(f"    - {loss}")
-
-            if combo["any_outcome"]:
-                print("  Any outcome:")
-                for any_game in combo["any_outcome"]:
-                    print(f"    - {any_game}")
-
-        if "winning_combinations_note" in result:
-            print(f"\n{result['winning_combinations_note']}")
-
-        print("-" * 60)
-
-    # Display meta-analysis TL;DR
-    if args.detailed and "meta_analysis" in result:
-        meta = result["meta_analysis"]
-        print()
-        print("=" * 60)
-        print("TL;DR - META-ANALYSIS ACROSS ALL WINNING SCENARIOS")
-        print("=" * 60)
-        print()
-
-        # Critical wins
-        if meta["always_win"]:
-            print("🎯 CRITICAL - Must ALWAYS win these:")
-            for game_info in meta["always_win"]:
-                print(f"   {game_info['game']} (100% of winning scenarios)")
-            print()
-
-        if meta["usually_win"]:
-            print("⭐ IMPORTANT - Should win these (75%+):")
-            for game_info in meta["usually_win"]:
-                print(f"   {game_info['game']} ({game_info['win_pct']:.0f}% need win)")
-            print()
-
-        # Critical losses
-        if meta["always_lose"]:
-            print("❌ CRITICAL - Must ALWAYS lose these:")
-            for game_info in meta["always_lose"]:
-                print(f"   {game_info['game']} (100% of winning scenarios)")
-            print()
-
-        if meta["usually_lose"]:
-            print("⚠️  IMPORTANT - Should lose these (75%+):")
-            for game_info in meta["usually_lose"]:
-                print(f"   {game_info['game']} ({game_info['lose_pct']:.0f}% need loss)")
-            print()
-
-        # Variable outcomes
-        if meta["sometimes_win"] or meta["sometimes_lose"]:
-            print("🔀 VARIABLE - Mixed outcomes:")
-            # Combine and show win/lose percentages
-            variable_games = {}
-            for game_info in meta["sometimes_win"] + meta["sometimes_lose"]:
-                game = game_info["game"]
-                if game not in variable_games:
-                    variable_games[game] = game_info
-
-            for game, info in variable_games.items():
-                if info["win_pct"] > 0 and info["lose_pct"] > 0:
-                    print(f"   {game}")
-                    print(f"      Win: {info['win_pct']:.0f}% | Lose: {info['lose_pct']:.0f}%")
-            print()
-
-        # Irrelevant games
-        if meta["always_any"]:
-            print("💤 IRRELEVANT - Outcome doesn't matter:")
-            for game_info in meta["always_any"]:
-                print(f"   {game_info['game']}")
-            print()
-
-        print("=" * 60)
-
-
-if __name__ == "__main__":
-    main()

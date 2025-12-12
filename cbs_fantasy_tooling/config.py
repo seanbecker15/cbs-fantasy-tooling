@@ -23,7 +23,7 @@ class Config:
         self.notification_to = self._parse_recipients(os.getenv("NOTIFICATION_TO"))
 
         # File storage configuration
-        self.output_dir = os.getenv("OUTPUT_DIR", "out")
+        self.output_dir = os.getenv("OUTPUT_DIR", "data")
         self.backup_dir = os.getenv("BACKUP_DIR", None)
 
         # Publisher configuration - which publishers to use

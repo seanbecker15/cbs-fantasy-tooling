@@ -62,7 +62,7 @@ SUPABASE_KEY=your_key
 
 ## Outputs
 
-All results saved to `out/`:
+All results saved to `OUTPUT_DIR` (default `data/`):
 - `out/week_{N}_game_results.json` - ESPN game slate with live/final scores
 - `out/week_{N}_pickem_results.csv` - CBS pick'em leaderboard (tabular export)
 - `out/week_{N}_pickem_results.json` - CBS pick'em leaderboard (structured JSON)

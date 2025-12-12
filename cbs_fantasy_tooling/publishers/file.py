@@ -11,10 +11,12 @@ from . import Publisher
 JSON_FILENAMES = {
     "pickem_results": lambda week: f"week_{week}_pickem_results.json",
     "game_results": lambda week: f"week_{week}_game_results.json",
+    "predictions": lambda week, code: f"week_{week}_predictions_{code}.json",
 }
 
 CSV_FILENAMES = {
     "pickem_results": lambda week: f"week_{week}_pickem_results.csv",
+    "strategy_summary": lambda week: f"week_{week}_strategy_summary.csv",
 }
 
 
@@ -26,7 +28,7 @@ class FilePublisher(Publisher):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.output_dir = config.get("output_dir", "out")
+        self.output_dir = config.get("output_dir")
         os.makedirs(self.output_dir, exist_ok=True)
 
     def validate_config(self) -> bool:

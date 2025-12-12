@@ -3,7 +3,7 @@
 Publishers decide where scraped/ingested data goes. Enable them via `.env` `ENABLED_PUBLISHERS` (comma-separated, e.g., `file,gmail,database`).
 
 ## File (default, safest)
-- **Config**: none required; uses `OUTPUT_DIR` (default `out/`) and optional `BACKUP_DIR`.  
+- **Config**: none required; uses `OUTPUT_DIR` (default `data/`) and optional `BACKUP_DIR`.  
 - **Writes**: `week_{n}_pickem_results.csv|json`, `week_{n}_game_results.json`.  
 - **Use when**: developing locally or feeding downstream analysis from files.
 

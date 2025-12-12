@@ -6,6 +6,8 @@ from datetime import datetime
 import numpy as np
 from cbs_fantasy_tooling.analysis.core.config import STRATEGY_CODES
 from cbs_fantasy_tooling.utils.date import get_current_nfl_week
+from cbs_fantasy_tooling.publishers.file import JSON_FILENAMES
+from cbs_fantasy_tooling.config import config
 
 
 def save_predictions(
@@ -28,16 +30,15 @@ def save_predictions(
     Returns:
         Filename of the saved file
     """
-    # Create out directory if it doesn't exist
-    os.makedirs("out", exist_ok=True)
+    output_dir = config.output_dir
+    os.makedirs(output_dir, exist_ok=True)
 
     # Get current week and timestamp
     current_week = get_current_nfl_week()
     strategy_code = STRATEGY_CODES.get(strategy_name, strategy_name.lower().replace("-", ""))
 
-    # Build filename following existing pattern
-    filename = f"week_{current_week}_predictions_{strategy_code}.json"
-    filepath = os.path.join("out", filename)
+    filename = JSON_FILENAMES["predictions"](current_week, strategy_code)
+    filepath = os.path.join(output_dir, filename)
 
     # Build prediction data structure
     predictions = {

@@ -31,6 +31,8 @@ from cbs_fantasy_tooling.utils.date import (
     get_commence_time_to,
     get_current_nfl_week,
 )
+from cbs_fantasy_tooling.publishers.file import CSV_FILENAMES
+from cbs_fantasy_tooling.config import config
 
 
 def run_strategy_simulation(
@@ -95,7 +97,7 @@ def run_strategy_simulation(
             user_filename = save_predictions(
                 "Custom-User", picks, confidence, week_mapping, game_probs
             )
-            print(f"\nYour picks saved to: out/{user_filename}")
+            print(f"\nYour picks saved to: {config.output_dir}/{user_filename}")
 
             results["user_analysis"] = {
                 "summary": user_summary,
@@ -191,10 +193,10 @@ def save_results(df, week_mapping, game_probs):
 
     # Save strategy summary CSV
     current_week = get_current_nfl_week()
-    out_filename = f"week_{current_week}_strategy_summary.csv"
-    out_path = os.path.join("out", out_filename)
+    out_filename = CSV_FILENAMES["strategy_summary"](current_week)
+    out_path = os.path.join(config.output_dir, out_filename)
 
-    os.makedirs("out", exist_ok=True)
+    os.makedirs(config.output_dir, exist_ok=True)
     df.to_csv(out_path, index=False)
     print(f"\nSaved: {out_path}")
 
@@ -211,7 +213,7 @@ def save_results(df, week_mapping, game_probs):
         strategy_func = STRATEGIES[strategy_name]
         picks, conf = strategy_func(game_probs)
         filename = save_predictions(strategy_name, picks, conf, week_mapping, game_probs)
-        print(f"  {strategy_name}: out/{filename}")
+        print(f"  {strategy_name}: {config.output_dir}/{filename}")
 
 
 def display_recommendations(week_mapping, game_probs, recommended_strategy="Random-MidShuffle"):

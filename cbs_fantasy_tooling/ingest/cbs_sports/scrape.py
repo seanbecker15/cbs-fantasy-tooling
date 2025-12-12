@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-import os
 import sys
 import select
 from selenium import webdriver
@@ -16,6 +15,7 @@ from cbs_fantasy_tooling.models import PickemResult, PickemResults
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.database import DatabasePublisher
 from cbs_fantasy_tooling.storage.providers.database import compare_results
+from cbs_fantasy_tooling.config import config
 
 login_page_url = "https://www.cbssports.com/login?masterProductId=41010&product_abbrev=opm&show_opts=1&xurl=https%3A%2F%2Fpicks.cbssports.com%2Ffootball%2Fpickem%2Fpools%2Fizxw65dcmfwgyudjmnvwk3knmfxgcz3fojig633mhiytgobtgq2deoi%253D%2Fstandings%2Fweekly%3Fdevice%3Ddesktop%26device%3Ddesktop"
 
@@ -200,8 +200,8 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
 
 
 def run_scraper(params: PickemIngestParams, publishers: list[Publisher]) -> list[PickemResult]:
-    email = os.getenv("EMAIL")
-    password = os.getenv("PASSWORD")
+    email = config.email
+    password = config.password
 
     max_wait_time = 30
     chrome_options = Options()

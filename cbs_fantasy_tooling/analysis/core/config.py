@@ -1,7 +1,8 @@
 """Configuration constants and settings for the simulator."""
 
-import os
 from dotenv import load_dotenv
+
+from cbs_fantasy_tooling.config import config
 
 load_dotenv()
 
@@ -43,9 +44,9 @@ def get_field_composition():
             get_actual_field_composition,
         )
 
-        USER_NAME = os.getenv("USER_NAME")
-        strategy_mix = get_actual_field_composition(exclude_user=USER_NAME)
-        print(f"Using ACTUAL field composition from historical data (excluding {USER_NAME}):")
+        user_name = config.user_name
+        strategy_mix = get_actual_field_composition(exclude_user=user_name)
+        print(f"Using ACTUAL field composition from historical data (excluding {user_name}):")
         print(
             f"  Chalk: {strategy_mix['Chalk-MaxPoints']}, Slight: {strategy_mix['Slight-Contrarian']}, Aggressive: {strategy_mix['Aggressive-Contrarian']}"
         )

@@ -31,7 +31,7 @@ To grow this file:
 **Development Workflow:**
 - Use the interactive CLI (`cbs-scrape`) as the entry point, not direct Python module calls.
 - Test changes by running CLI in "Once" mode with manual week selection before committing.
-- Verify data output in `./out/` directory after ingestion or analysis.
+- Verify data output in `OUTPUT_DIR` (default `./data/`) after ingestion or analysis.
 
 ## Tech Stack & Tools
 
@@ -89,7 +89,7 @@ Analysis (monte_carlo.py, competitor_intelligence.py)
 
 **Critical Files:**
 - `.env` - Secrets and config (never commit; check `.env.example` for required vars)
-- `out/` - All analysis output (CSVs, JSON predictions, charts)
+- `OUTPUT_DIR` (default `data/`) - All analysis output (CSVs, JSON predictions, charts)
 - `config.py` - Centralized config management
 
 ## Anti-Patterns & Gotchas
@@ -98,6 +98,11 @@ Analysis (monte_carlo.py, competitor_intelligence.py)
 - ❌ Don't write ad-hoc CSV parsing in analysis scripts
 - ✅ Use `storage.providers` abstractions; they handle formatting and paths
 
+**Avoid hard coding file names/paths:**
+- ❌ Don't use `./data/week_5_odds.csv` directly
+- ✅ Use `publishers.file.JSON_FILENAMES` or `CSV_FILENAMES` constants
+- **Why**: Centralizes path management; prevents typos
+
 **Avoid hardcoding weeks or seasons:**
 - ❌ Don't use `week = 14` in code
 - ✅ Use `config.py` to calculate current week from `WEEK_ONE_START_DATE` (Tuesday-to-Tuesday windows)
@@ -105,23 +110,8 @@ Analysis (monte_carlo.py, competitor_intelligence.py)
 
 **Avoid storing API keys in code:**
 - ❌ `api_key = "abc123"` in any module
-- ✅ Read from env via `config.py`: `os.getenv("THE_ODDS_API_KEY")`
+- ✅ Read from env via `config.py`: `config.the_odds_api_key`
 - **Why**: Prevents credential leaks; enables different keys per environment
-
-**Avoid running scrapers without testing selectors first:**
-- ❌ Assume CBS Sports HTML structure is stable
-- ✅ Run in "Once" mode first; verify output in `./out/`; CBS often changes their DOM
-- **Why**: Selenium scripts are brittle; catch breakage early
-
-**Avoid skipping de-vig for probability calculations:**
-- ❌ Using raw betting odds as win probabilities
-- ✅ The codebase already implements median consensus de-vig with sharp book weighting
-- **Why**: Bookmaker margins skew probabilities; de-vig gives fairer estimates
-
-**Avoid pushing untested Monte Carlo changes:**
-- ❌ Modifying `analysis/core/` strategy logic without validation
-- ✅ Run full strategy comparison (`cbs-scrape → Analyze → Strategy Simulator`) and sanity-check expected points
-- **Why**: Small bugs in probability logic cause huge EV miscalculations
 
 ## External Docs & When To Read Them
 
