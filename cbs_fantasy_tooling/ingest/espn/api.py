@@ -299,7 +299,7 @@ def fetch_game_results(weeks: List[int]) -> Dict[int, List[GameResult]]:
 
 @dataclass
 class GameOutcomeIngestParams:
-    week: int
+    weeks: List[int]
     poll_interval: int | None = None
 
 
@@ -307,31 +307,33 @@ def ingest_game_outcomes(
     params: GameOutcomeIngestParams,
     publishers: List[Publisher],
 ):
-    """Ingest game outcomes for a specific week using the provided API."""
-    last_snapshot: Optional[List[dict]] = None
+    """Ingest game outcomes for one or multiple weeks using the provided API."""
+    last_snapshot: Dict[int, List[dict]] = {}
     api = ESPNGameOutcomeApi(season=config.season)
+    weeks = sorted(set(params.weeks))
 
     try:
         while True:
-            game_results = api.fetch_game_results(week=params.week)
-            if game_results:
-                print(f"Fetched {len(game_results)} game results for week {params.week}.")
-            else:
-                print(f"No game results found for week {params.week}.")
+            for week in weeks:
+                game_results = api.fetch_game_results(week=week)
+                if game_results:
+                    print(f"Fetched {len(game_results)} game results for week {week}.")
+                else:
+                    print(f"No game results found for week {week}.")
 
-            db_payload = [status.to_dict() for status in game_results]
-            if db_payload != last_snapshot:
-                last_snapshot = db_payload
-                for publisher in publishers:
-                    data = GameResults(
-                        season=config.season,
-                        week=params.week,
-                        games=game_results,
-                        num_games=len(game_results),
-                    )
-                    publisher.publish_game_results(results_data=data)
-            else:
-                print("No changes detected since last poll.")
+                db_payload = [status.to_dict() for status in game_results]
+                if db_payload != last_snapshot.get(week):
+                    last_snapshot[week] = db_payload
+                    for publisher in publishers:
+                        data = GameResults(
+                            season=config.season,
+                            week=week,
+                            games=game_results,
+                            num_games=len(game_results),
+                        )
+                        publisher.publish_game_results(results_data=data)
+                else:
+                    print(f"No changes detected since last poll (week {week}).")
 
             if params.poll_interval is None or params.poll_interval <= 0:
                 break

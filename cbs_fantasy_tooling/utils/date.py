@@ -3,7 +3,7 @@ from datetime import datetime, time, timedelta, timezone
 from cbs_fantasy_tooling import config
 
 
-def get_current_nfl_week() -> int:
+def calc_weeks_since_start() -> int:
     """
     Calculate the current NFL week based on configured start date.
 

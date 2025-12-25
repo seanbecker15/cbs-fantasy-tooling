@@ -23,6 +23,9 @@ CHART_FILENAMES = {
     "win_leaderboard": lambda week: f"week_{week}_win_leaderboard.png",
     "user_win_pct": lambda player_slug: f"{player_slug}_win_pct.png",
     "player_style": lambda suffix: f"player_style_{suffix}.png",
+    "player_upset": lambda suffix: f"player_upset_{suffix}.png",
+    "team_contrarian_wins": lambda suffix: f"team_contrarian_wins_{suffix}.png",
+    "team_contrarian_losses": lambda suffix: f"team_contrarian_losses_{suffix}.png",
 }
 
 

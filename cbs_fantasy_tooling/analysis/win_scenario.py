@@ -11,6 +11,15 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
 from matplotlib import pyplot as plt
+import squarify
+from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
+from cbs_fantasy_tooling.analysis.odds.converter import (
+    consensus_moneyline_probs,
+    rows_to_game_probs,
+)
+from cbs_fantasy_tooling.analysis.core.config import SHARP_BOOKS, SHARP_WEIGHT
+from cbs_fantasy_tooling.utils.date import get_commence_time_from, get_commence_time_to
+from cbs_fantasy_tooling.analysis.team_normalization import normalize_team_name
 from supabase import Client, create_client
 
 from cbs_fantasy_tooling.config import config
@@ -142,7 +151,48 @@ class WinScenarioAnalyzer:
             print(f"Warning: Could not load game probabilities: {e}")
             return {}
 
-    def analyze_win_scenarios(self, week: int, target_player: str, detailed: bool = False) -> Dict:
+    def _build_game_probabilities_from_odds(
+        self, pending_games: List[Tuple[str, str]]
+    ) -> Dict[tuple[str, str], float]:
+        """Fetch odds once and build a team-pair -> win prob map, normalized to pending teams."""
+        try:
+            events = fetch_odds(get_commence_time_from(), get_commence_time_to())
+            rows = consensus_moneyline_probs(events, SHARP_BOOKS, SHARP_WEIGHT)
+            _, mapping = rows_to_game_probs(rows)
+            # Build available teams from pending games (abbreviations)
+            available_teams = list({team for game in pending_games for team in game})
+            game_probs: Dict[tuple[str, str], float] = {}
+            matched = 0
+            mismatched = 0
+            for m in mapping:
+                try:
+                    fav = normalize_team_name(m["favorite"], available_teams)
+                    dog = normalize_team_name(m["dog"], available_teams)
+                except Exception as e:
+                    print(f"Warning: could not normalize teams from odds data: {e}")
+                    mismatched += 1
+                    continue
+                p = m["p_fav"]
+                game_probs[(fav, dog)] = p
+                game_probs[(dog, fav)] = 1.0 - p
+                matched += 1
+
+            print(
+                f"Odds coverage: matched {matched} games from odds feed; mismatched={mismatched}; pending_games={len(pending_games)}"
+            )
+            return game_probs
+        except Exception as e:
+            print(f"Warning: could not fetch odds-based probabilities: {e}")
+            return {}
+
+    def analyze_win_scenarios(
+        self,
+        week: int,
+        target_player: str,
+        detailed: bool = False,
+        game_probabilities: Dict[tuple[str, str], float] | None = None,
+        use_actual_probabilities: bool = True,
+    ) -> Dict:
         """Analyze all possible win scenarios for a player."""
         player_scores = self.get_player_scores(week)
 
@@ -175,12 +225,18 @@ class WinScenarioAnalyzer:
             }
 
         # Load game probabilities
-        game_probs = self.get_game_probabilities(week)
+        if game_probabilities is not None:
+            game_probs = game_probabilities
+        elif use_actual_probabilities:
+            game_probs = self.get_game_probabilities(week)
+        else:
+            game_probs = {}
 
         # Generate all possible outcomes
         num_scenarios = 2 ** len(pending_games)
         winning_scenarios = []
         weighted_win_prob = 0.0
+        target_player_picks = self.get_player_picks(week, target_player)
 
         for outcome_idx in range(num_scenarios):
             outcome_map: Dict[str, bool] = {}
@@ -234,6 +290,25 @@ class WinScenarioAnalyzer:
                 game_str = f"({team1} vs. {team2} - any)"
             pending_games_formatted.append(game_str)
 
+        # Build per-game status for target player
+        game_statuses = []
+        for pick in sorted(
+            target_player_picks, key=lambda p: p.confidence_points if p.confidence_points else 0, reverse=True
+        ):
+            status = "Pending"
+            if pick.is_correct is True:
+                status = "Win"
+            elif pick.is_correct is False:
+                status = "Loss"
+            game_statuses.append(
+                {
+                    "team": pick.team,
+                    "opponent": pick.opponent_team,
+                    "confidence": pick.confidence_points,
+                    "status": status,
+                }
+            )
+
         result = {
             "week": week,
             "season": self.season,
@@ -247,6 +322,7 @@ class WinScenarioAnalyzer:
             "win_probability": primary_prob,
             "win_percentage": f"{primary_prob * 100:.2f}%",
             "using_actual_odds": bool(game_probs),
+            "game_statuses": game_statuses,
         }
 
         if detailed and winning_scenarios:
@@ -402,73 +478,157 @@ class WinScenarioAnalyzer:
             return {"error": f"No players found in week {week} data"}
 
         pending_games = self.get_pending_games(week)
-        leaderboard = []
+        leaderboard_naive = []
+        leaderboard_odds = []
+
+        # Fetch odds-based probabilities once (if available)
+        odds_probs = self._build_game_probabilities_from_odds(pending_games) if pending_games else {}
 
         print(f"Analyzing {len(player_scores)} players...")
         for idx, player_name in enumerate(sorted(player_scores.keys()), 1):
             print(f"  [{idx}/{len(player_scores)}] {player_name}...", end="\r")
 
-            result = self.analyze_win_scenarios(week=week, target_player=player_name)
-            if "error" not in result:
-                leaderboard.append(
+            result_naive = self.analyze_win_scenarios(
+                week=week, target_player=player_name, use_actual_probabilities=False
+            )
+            if "error" not in result_naive:
+                leaderboard_naive.append(
                     {
                         "player": player_name,
-                        "current_points": result["current_points"],
-                        "pending_picks": result["pending_picks"],
-                        "total_scenarios": result["total_scenarios"],
-                        "winning_scenarios": result["winning_scenarios"],
-                        "win_probability": result["win_probability"],
-                        "win_percentage": result["win_percentage"],
+                        "current_points": result_naive["current_points"],
+                        "pending_picks": result_naive["pending_picks"],
+                        "total_scenarios": result_naive["total_scenarios"],
+                        "winning_scenarios": result_naive["winning_scenarios"],
+                        "win_probability": result_naive["win_probability"],
+                        "win_percentage": result_naive["win_percentage"],
                     }
                 )
 
+            if odds_probs:
+                result_odds = self.analyze_win_scenarios(
+                    week=week,
+                    target_player=player_name,
+                    game_probabilities=odds_probs,
+                    use_actual_probabilities=True,
+                )
+                if "error" not in result_odds:
+                    leaderboard_odds.append(
+                        {
+                            "player": player_name,
+                            "win_probability": result_odds["win_probability"],
+                            "win_percentage": result_odds["win_percentage"],
+                        }
+                    )
+
         print()  # Clear progress line
-        leaderboard.sort(key=lambda x: x["win_probability"], reverse=True)
+        leaderboard_naive.sort(key=lambda x: x["win_probability"], reverse=True)
+        leaderboard_odds.sort(key=lambda x: x["win_probability"], reverse=True)
 
         return {
             "week": week,
             "season": self.season,
             "pending_games": len(pending_games),
-            "total_players": len(leaderboard),
-            "leaderboard": leaderboard,
+            "pending_games_list": pending_games,
+            "total_players": len(leaderboard_naive),
+            "leaderboard": leaderboard_naive,
+            "leaderboard_odds": leaderboard_odds,
         }
 
 
 def _save_win_leaderboard_chart(result: Dict) -> Optional[str]:
-    """Save a win probability leaderboard chart and return the filepath."""
-    leaderboard = result.get("leaderboard", [])
-    if not leaderboard:
+    """Save win probability charts (50/50 and odds-based if available)."""
+    leaderboard_naive = result.get("leaderboard", [])
+    leaderboard_odds = result.get("leaderboard_odds", [])
+
+    if not leaderboard_naive:
         return None
 
     def _sanitize(label: str) -> str:
-        # Escape mathtext-sensitive characters so names like "G-Money$$" render.
         return label.replace("$", r"\$")
 
-    subset = leaderboard  # include all players
-    players = [_sanitize(entry["player"]) for entry in subset][::-1]  # highest probability on top
-    probs = [entry["win_probability"] * 100 for entry in subset][::-1]
+    def _collapse_small(entries: list[Dict]) -> list[Dict]:
+        """Group players with <=1% win probability into a single 'Other' bucket."""
+        main = []
+        other_prob = 0.0
+        for entry in entries:
+            prob = entry["win_probability"]
+            if prob <= 0.01:
+                other_prob += prob
+            else:
+                main.append(entry)
+        if other_prob > 0:
+            main.append({"player": "Other", "win_probability": other_prob, "win_percentage": f"{other_prob*100:.2f}%"})
+        return sorted(main, key=lambda x: x["win_probability"], reverse=True)
 
-    fig_height = 0.6 * len(subset) + 1.5
-    fig, ax = plt.subplots(figsize=(9, fig_height))
-
-    bars = ax.barh(players, probs, color="#4B9CD3", edgecolor="#1E467B")
-    max_prob = max(probs) if probs else 0
-    ax.set_xlim(0, max(100, max_prob * 1.1))
-    ax.set_xlabel("Win Probability (%)")
-    ax.set_title(
-        f"Win Probability — Week {result['week']} ({result['pending_games']} pending games)"
-    )
-    ax.grid(axis="x", linestyle="--", alpha=0.3)
-
-    for bar, pct in zip(bars, probs):
-        ax.text(
-            pct + 0.5,
-            bar.get_y() + bar.get_height() / 2,
-            f"{pct:.1f}%",
-            va="center",
-            ha="left",
-            fontsize=10,
+    def _treemap(ax, players, probs, title):
+        labels = [f"{p}\n{prob:.1f}%" for p, prob in zip(players[::-1], probs[::-1])]
+        sizes = probs[::-1]
+        cmap = plt.cm.Blues
+        vmin = min(sizes) if sizes else 0
+        vmax = max(sizes) if sizes else 1
+        norm = plt.Normalize(vmin=vmin, vmax=vmax)
+        colors = [cmap(norm(s)) for s in sizes]
+        squarify.plot(
+            sizes=sizes,
+            label=labels,
+            color=colors,
+            alpha=0.8,
+            text_kwargs={"fontsize": 9},
+            ax=ax,
         )
+        ax.axis("off")
+        ax.set_title(title, fontsize=12)
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    plt.subplots_adjust(wspace=0.1)
+
+    # 50/50 treemap
+    collapsed_naive = _collapse_small(leaderboard_naive)
+    players_naive = [_sanitize(entry["player"]) for entry in collapsed_naive][::-1]
+    probs_naive = [entry["win_probability"] * 100 for entry in collapsed_naive][::-1]
+    _treemap(
+        axes[0],
+        players_naive,
+        probs_naive,
+        f"Win Outcome Probability (50/50 pending games) — Week {result['week']}",
+    )
+
+    if leaderboard_odds:
+        collapsed_odds = _collapse_small(leaderboard_odds)
+        players_odds = [_sanitize(entry["player"]) for entry in collapsed_odds][::-1]
+        probs_odds = [entry["win_probability"] * 100 for entry in collapsed_odds][::-1]
+        _treemap(
+            axes[1],
+            players_odds,
+            probs_odds,
+            f"Win Outcome Probability (Odds-weighted) — Week {result['week']}",
+        )
+    else:
+        axes[1].axis("off")
+        axes[1].text(
+            0.5,
+            0.5,
+            "Odds data unavailable",
+            ha="center",
+            va="center",
+            fontsize=12,
+        )
+
+    # Pending games status text box
+    pending_games = result.get("pending_games_list", [])
+    if pending_games:
+        games_text = "\n".join([f"{a} vs {b}" for a, b in pending_games])
+    else:
+        games_text = "No pending games listed."
+    fig.text(
+        0.99,
+        0.02,
+        f"Pending Games:\n{games_text}",
+        ha="right",
+        va="bottom",
+        fontsize=9,
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.7),
+    )
 
     plt.tight_layout()
 
@@ -518,6 +678,14 @@ def analyze_win_scenarios(week: int, player_name: str, detailed: bool = False):
     print(f"Winning Scenarios: {result['winning_scenarios']:,}")
     print(f"Win Probability: {result['win_percentage']}")
     print()
+
+    if result.get("game_statuses"):
+        print("GAME STATUS (your picks):")
+        for gs in result["game_statuses"]:
+            print(
+                f"  {gs['team']} vs {gs['opponent']} | Conf: {gs['confidence']} | Status: {gs['status']}"
+            )
+        print()
 
     if result.get("using_actual_odds"):
         print("NOTE: Using actual game probabilities from odds data")

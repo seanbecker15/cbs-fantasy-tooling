@@ -29,7 +29,7 @@ from cbs_fantasy_tooling.analysis.user.analysis import simulate_user_picks, anal
 from cbs_fantasy_tooling.utils.date import (
     get_commence_time_from,
     get_commence_time_to,
-    get_current_nfl_week,
+    calc_weeks_since_start,
 )
 from cbs_fantasy_tooling.publishers.file import CSV_FILENAMES
 from cbs_fantasy_tooling.config import config
@@ -192,7 +192,7 @@ def save_results(df, week_mapping, game_probs):
     import os
 
     # Save strategy summary CSV
-    current_week = get_current_nfl_week()
+    current_week = calc_weeks_since_start() + 1
     out_filename = CSV_FILENAMES["strategy_summary"](current_week)
     out_path = os.path.join(config.output_dir, out_filename)
 

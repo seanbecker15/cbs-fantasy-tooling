@@ -19,7 +19,7 @@ from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pic
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.factory import create_publishers
-from cbs_fantasy_tooling.utils.date import get_current_nfl_week
+from cbs_fantasy_tooling.utils.date import calc_weeks_since_start
 
 
 class MenuOption(str, Enum):
@@ -51,6 +51,29 @@ class AnalysisType(str, Enum):
 # Global list to track background ingestion threads
 _background_threads: List[threading.Thread] = []
 _threads_lock = threading.Lock()
+
+
+def _parse_weeks_input(weeks_input: str) -> list[int]:
+    """Parse comma/space separated week input into a list of ints."""
+    if not weeks_input:
+        return []
+    weeks: list[int] = []
+    for part in weeks_input.replace(" ", "").split(","):
+        if not part:
+            continue
+        try:
+            weeks.append(int(part))
+        except ValueError:
+            print(f"Skipping invalid week entry: '{part}'")
+    return weeks
+
+
+def _parse_player_list(raw: str) -> list[str]:
+    """Parse comma-separated player list; strip any accidental newlines."""
+    if not raw:
+        return []
+    normalized = raw.replace("\n", "").replace("\r", "")
+    return [p.strip() for p in normalized.split(",") if p.strip()]
 
 
 def start_background_ingestion(target_func, *args, **kwargs):
@@ -109,15 +132,15 @@ def ingest_flow(publishers: List[Publisher]):
         ).execute()
     )
 
-    target_week = inquirer.text(
-        message="Target week number",
-        default=str(get_current_nfl_week()),
-    ).execute()
-
     if DataType.PICKEM_RESULTS in data_types:
+        target_week = inquirer.text(
+            message="Target week number",
+            default=str(calc_weeks_since_start()),
+        ).execute()
+        
         current_week = inquirer.text(
             message="Current week (for scraper dropdown)",
-            default=str(get_current_nfl_week() + 1),
+            default=str(calc_weeks_since_start() + 1),
         ).execute()
 
         scrape_all_weeks = False
@@ -145,14 +168,23 @@ def ingest_flow(publishers: List[Publisher]):
             print("✓ Pick'em Results ingestion started in background")
 
     if DataType.GAME_OUTCOMES in data_types:
+        weeks_input = inquirer.text(
+            message="Week(s) to ingest game outcomes (comma-separated allowed)",
+            default=str(calc_weeks_since_start()),
+        ).execute()
+        week_list = _parse_weeks_input(weeks_input)
+        if not week_list:
+            print("No valid weeks provided for game outcomes. Returning to main menu...\n")
+            return
+
         if mode == IngestMode.ONCE:
             params = GameOutcomeIngestParams(
-                week=int(target_week),
+                weeks=week_list,
             )
             ingest_game_outcomes(params, publishers)
         else:
             params = GameOutcomeIngestParams(
-                week=int(target_week),
+                weeks=week_list,
                 poll_interval=30,  # seconds
             )
             print("Starting Game Outcomes real-time ingestion in background (30s interval)...")
@@ -236,7 +268,7 @@ def analysis_flow():
     if AnalysisType.VISUALIZE_CONTRARIAN_PICKS in analysis_types:
         target_week_input = inquirer.text(
             message="Visualize contrarian picks for week number",
-            default=str(get_current_nfl_week()),
+            default=str(calc_weeks_since_start()),
         ).execute()
 
         target_week = int(target_week_input)
@@ -251,7 +283,7 @@ def analysis_flow():
     if AnalysisType.WIN_SCENARIO in analysis_types:
         target_week_input = inquirer.text(
             message="Analyze win scenarios for week number",
-            default=str(get_current_nfl_week()),
+            default=str(calc_weeks_since_start()),
         ).execute()
 
         player_name_input = inquirer.text(
@@ -277,7 +309,7 @@ def analysis_flow():
     if AnalysisType.WIN_LEADERBOARD in analysis_types:
         target_week_input = inquirer.text(
             message="Analyze win leaderboard for week number",
-            default=str(get_current_nfl_week()),
+            default=str(calc_weeks_since_start()),
         ).execute()
 
         target_week = int(target_week_input)
@@ -304,18 +336,28 @@ def analysis_flow():
 
     if AnalysisType.USER_CONTRARIAN_STYLE in analysis_types:
         player_list_input = inquirer.text(
-            message="Player name(s) (comma-separated; leave blank for USER_NAME)",
+            message="Player name(s) (comma/newline separated; leave blank for USER_NAME)",
             default=config.user_name or "",
         ).execute()
 
-        players = [p.strip() for p in player_list_input.split(",") if p.strip()]
+        players = _parse_player_list(player_list_input)
         players = players if players else None
+
+        contrarian_pct_input = inquirer.text(
+            message="What % do you consider a pick to be 'contrarian'?",
+            default="40",
+        ).execute()
+        try:
+            contrarian_pct = float(contrarian_pct_input)
+        except ValueError:
+            print("Invalid contrarian % input, using default 40")
+            contrarian_pct = 40.0
 
         print("\n" + "=" * 60)
         print("PLAYER CONTRARIAN STYLE")
         print("=" * 60)
 
-        analyze_player_style(players=players)
+        analyze_player_style(players=players, contrarian_pct=contrarian_pct)
 
     print("\nReturning to main menu...\n")
 
