@@ -6,8 +6,8 @@
 .env.bak*
 .env.*.bak
 
-# Output directories
-data/
+# Output directories (repo root only - do not match the analysis/data package)
+/data/
 
 # Python cache files
 __pycache__/
