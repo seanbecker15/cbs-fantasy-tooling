@@ -293,7 +293,9 @@ class WinScenarioAnalyzer:
         # Build per-game status for target player
         game_statuses = []
         for pick in sorted(
-            target_player_picks, key=lambda p: p.confidence_points if p.confidence_points else 0, reverse=True
+            target_player_picks,
+            key=lambda p: p.confidence_points if p.confidence_points else 0,
+            reverse=True,
         ):
             status = "Pending"
             if pick.is_correct is True:
@@ -482,7 +484,9 @@ class WinScenarioAnalyzer:
         leaderboard_odds = []
 
         # Fetch odds-based probabilities once (if available)
-        odds_probs = self._build_game_probabilities_from_odds(pending_games) if pending_games else {}
+        odds_probs = (
+            self._build_game_probabilities_from_odds(pending_games) if pending_games else {}
+        )
 
         print(f"Analyzing {len(player_scores)} players...")
         for idx, player_name in enumerate(sorted(player_scores.keys()), 1):
@@ -557,7 +561,13 @@ def _save_win_leaderboard_chart(result: Dict) -> Optional[str]:
             else:
                 main.append(entry)
         if other_prob > 0:
-            main.append({"player": "Other", "win_probability": other_prob, "win_percentage": f"{other_prob*100:.2f}%"})
+            main.append(
+                {
+                    "player": "Other",
+                    "win_probability": other_prob,
+                    "win_percentage": f"{other_prob*100:.2f}%",
+                }
+            )
         return sorted(main, key=lambda x: x["win_probability"], reverse=True)
 
     def _treemap(ax, players, probs, title):

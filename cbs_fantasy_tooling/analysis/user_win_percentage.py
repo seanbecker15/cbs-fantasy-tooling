@@ -61,7 +61,9 @@ def analyze_user_win_percentage(player_name: Optional[str] = None) -> Optional[s
         total_wins += wins
         total_losses += losses
 
-    overall_pct = (total_wins / (total_wins + total_losses) * 100) if (total_wins + total_losses) else 0
+    overall_pct = (
+        (total_wins / (total_wins + total_losses) * 100) if (total_wins + total_losses) else 0
+    )
     best_idx = max(range(len(win_pcts)), key=lambda i: win_pcts[i])
     best_week = weeks[best_idx]
     best_pct = win_pcts[best_idx]

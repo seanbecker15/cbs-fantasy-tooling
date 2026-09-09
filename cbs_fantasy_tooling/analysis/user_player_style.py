@@ -71,9 +71,7 @@ def _compute_player_weekly_profiles(
         else:
             week_picks["is_correct"] = None
         consensus = loader.get_field_consensus(week=week)
-        week_picks = week_picks.merge(
-            consensus[["team", "pick_percentage"]], on="team", how="left"
-        )
+        week_picks = week_picks.merge(consensus[["team", "pick_percentage"]], on="team", how="left")
         week_picks["pick_percentage"] = week_picks["pick_percentage"].fillna(0)
         week_picks["risk"] = 1 - week_picks["pick_percentage"]
         week_picks["pick_aggressiveness"] = week_picks["risk"] * week_picks["confidence"]
@@ -101,10 +99,12 @@ def _compute_player_weekly_profiles(
             contrarian_points = player_picks.loc[contrarian_mask, "confidence"].sum()
             contrarian_attempts = contrarian_mask.sum()
             contrarian_wins = player_picks.loc[
-                contrarian_mask & (player_picks["is_correct"] == True)
+                contrarian_mask & (player_picks["is_correct"].eq(True))
             ]
             contrarian_win_count = len(contrarian_wins)
-            contrarian_win_rate = contrarian_win_count / contrarian_attempts if contrarian_attempts else 0
+            contrarian_win_rate = (
+                contrarian_win_count / contrarian_attempts if contrarian_attempts else 0
+            )
             total_conf_points = player_picks["confidence"].sum()
 
             records.append(
@@ -183,13 +183,19 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
     league_median_map = dict(zip(league_stats["week"], league_stats["median"]))
     ax.axhline(0, color="gray", linestyle="--", alpha=0.6, linewidth=1)
     ax.fill_between(
-        league_stats["week"], league_stats["p25"] - league_stats["median"], league_stats["p75"] - league_stats["median"],
-        color="#e0e0e0", alpha=0.6, label="League IQR (vs median)"
+        league_stats["week"],
+        league_stats["p25"] - league_stats["median"],
+        league_stats["p75"] - league_stats["median"],
+        color="#e0e0e0",
+        alpha=0.6,
+        label="League IQR (vs median)",
     )
     colors = plt.cm.tab20.colors
     for idx, player in enumerate(focus_players):
         data = profile_df[profile_df["player"] == player].sort_values("week")
-        delta = [row["total_aggr"] - league_median_map.get(row["week"], 0) for _, row in data.iterrows()]
+        delta = [
+            row["total_aggr"] - league_median_map.get(row["week"], 0) for _, row in data.iterrows()
+        ]
         ax.plot(data["week"], delta, marker="o", label=player, color=colors[idx % 20])
 
     ax.set_title("Aggressiveness vs League Median (Δ Risk×Conf)")
@@ -307,7 +313,12 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
     )
     league_contr_wins.columns = ["week", "median", "p25", "p75"]
     ax.fill_between(
-        league_contr_wins["week"], league_contr_wins["p25"], league_contr_wins["p75"], color="#e0e0e0", alpha=0.6, label="League IQR"
+        league_contr_wins["week"],
+        league_contr_wins["p25"],
+        league_contr_wins["p75"],
+        color="#e0e0e0",
+        alpha=0.6,
+        label="League IQR",
     )
     ax.plot(
         league_contr_wins["week"],
@@ -340,12 +351,18 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
         .reindex(focus_players)
     )
     season_contr["win_rate"] = season_contr.apply(
-        lambda r: (r["contrarian_wins"] / r["contrarian_attempts"]) if r["contrarian_attempts"] else 0,
+        lambda r: (
+            (r["contrarian_wins"] / r["contrarian_attempts"]) if r["contrarian_attempts"] else 0
+        ),
         axis=1,
     )
     ax.barh(season_contr.index, season_contr["contrarian_wins"], color="#f16913")
     for y, (wins, attempts, rate) in enumerate(
-        zip(season_contr["contrarian_wins"], season_contr["contrarian_attempts"], season_contr["win_rate"])
+        zip(
+            season_contr["contrarian_wins"],
+            season_contr["contrarian_attempts"],
+            season_contr["win_rate"],
+        )
     ):
         ax.text(
             wins + 0.2,
@@ -366,11 +383,15 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
         .reindex(focus_players)
     )
     season_points["pct_of_points"] = season_points.apply(
-        lambda r: (r["contrarian_points"] / r["total_conf_points"]) if r["total_conf_points"] else 0,
+        lambda r: (
+            (r["contrarian_points"] / r["total_conf_points"]) if r["total_conf_points"] else 0
+        ),
         axis=1,
     )
     ax.barh(season_points.index, season_points["contrarian_points"], color="#6baed6")
-    for y, (pts, pct) in enumerate(zip(season_points["contrarian_points"], season_points["pct_of_points"])):
+    for y, (pts, pct) in enumerate(
+        zip(season_points["contrarian_points"], season_points["pct_of_points"])
+    ):
         ax.text(
             pts + 0.3,
             y,
@@ -402,16 +423,14 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
         else:
             week_picks["is_correct"] = None
         consensus = loader_team.get_field_consensus(week=week)
-        week_picks = week_picks.merge(
-            consensus[["team", "pick_percentage"]], on="team", how="left"
-        )
+        week_picks = week_picks.merge(consensus[["team", "pick_percentage"]], on="team", how="left")
         week_picks["pick_percentage"] = week_picks["pick_percentage"].fillna(0)
         week_picks["contrarian"] = week_picks["pick_percentage"] <= threshold
         week_picks["contrarian_win"] = week_picks["contrarian"] & (
-            week_picks["is_correct"] == True
+            week_picks["is_correct"].eq(True)
         )
         week_picks["contrarian_loss"] = week_picks["contrarian"] & (
-            week_picks["is_correct"] == False
+            week_picks["is_correct"].eq(False)
         )
         week_picks["contrarian_points"] = week_picks.apply(
             lambda r: r["confidence"] if r["contrarian"] else 0, axis=1
@@ -456,10 +475,9 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
             .sum()
             .reset_index()
         )
-        top_teams = (
-            season_team.sort_values(["contrarian_wins", "contrarian_points"], ascending=False)
-            .head(10)
-        )
+        top_teams = season_team.sort_values(
+            ["contrarian_wins", "contrarian_points"], ascending=False
+        ).head(10)
         focus_teams = top_teams["team"].tolist()
 
         fig3 = plt.figure(figsize=(20, 8))
@@ -488,12 +506,18 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
         # Season team contrarian wins
         season_team = season_team.set_index("team").loc[focus_teams]
         season_team["win_rate"] = season_team.apply(
-            lambda r: (r["contrarian_wins"] / r["contrarian_attempts"]) if r["contrarian_attempts"] else 0,
+            lambda r: (
+                (r["contrarian_wins"] / r["contrarian_attempts"]) if r["contrarian_attempts"] else 0
+            ),
             axis=1,
         )
         ax_tr.barh(season_team.index, season_team["contrarian_wins"], color="#f16913")
         for y, (wins, attempts, rate) in enumerate(
-            zip(season_team["contrarian_wins"], season_team["contrarian_attempts"], season_team["win_rate"])
+            zip(
+                season_team["contrarian_wins"],
+                season_team["contrarian_attempts"],
+                season_team["win_rate"],
+            )
         ):
             ax_tr.text(
                 wins + 0.2,
@@ -508,7 +532,9 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
 
         # Season team contrarian points
         season_team["pct_of_points"] = season_team.apply(
-            lambda r: (r["contrarian_points"] / r["total_conf_points"]) if r["total_conf_points"] else 0,
+            lambda r: (
+                (r["contrarian_points"] / r["total_conf_points"]) if r["total_conf_points"] else 0
+            ),
             axis=1,
         )
         ax_bottom.barh(season_team.index, season_team["contrarian_points"], color="#6baed6")
@@ -533,7 +559,9 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
 
         # Team contrarian losses figure (mirror of wins)
         focus_losses = (
-            season_team.sort_values(["contrarian_losses", "contrarian_points_loss"], ascending=False)
+            season_team.sort_values(
+                ["contrarian_losses", "contrarian_points_loss"], ascending=False
+            )
             .head(10)
             .index.tolist()
         )
@@ -564,12 +592,20 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
         # Season losses
         season_losses = season_team.loc[focus_losses]
         season_losses["loss_rate"] = season_losses.apply(
-            lambda r: (r["contrarian_losses"] / r["contrarian_attempts"]) if r["contrarian_attempts"] else 0,
+            lambda r: (
+                (r["contrarian_losses"] / r["contrarian_attempts"])
+                if r["contrarian_attempts"]
+                else 0
+            ),
             axis=1,
         )
         ax4_tr.barh(season_losses.index, season_losses["contrarian_losses"], color="#cb181d")
         for y, (losses, attempts, rate) in enumerate(
-            zip(season_losses["contrarian_losses"], season_losses["contrarian_attempts"], season_losses["loss_rate"])
+            zip(
+                season_losses["contrarian_losses"],
+                season_losses["contrarian_attempts"],
+                season_losses["loss_rate"],
+            )
         ):
             ax4_tr.text(
                 losses + 0.2,
@@ -584,10 +620,16 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
 
         # Season contrarian points on losses
         season_losses["pct_of_points_loss"] = season_losses.apply(
-            lambda r: (r["contrarian_points_loss"] / r["total_conf_points"]) if r["total_conf_points"] else 0,
+            lambda r: (
+                (r["contrarian_points_loss"] / r["total_conf_points"])
+                if r["total_conf_points"]
+                else 0
+            ),
             axis=1,
         )
-        ax4_bottom.barh(season_losses.index, season_losses["contrarian_points_loss"], color="#fb6a4a")
+        ax4_bottom.barh(
+            season_losses.index, season_losses["contrarian_points_loss"], color="#fb6a4a"
+        )
         for y, (pts, pct) in enumerate(
             zip(season_losses["contrarian_points_loss"], season_losses["pct_of_points_loss"])
         ):
@@ -602,7 +644,9 @@ def analyze_player_style(players: list[str] | None = None, contrarian_pct: float
         ax4_bottom.set_xlabel("Confidence Points on Losing Contrarian Picks")
         ax4_bottom.grid(axis="x", alpha=0.3)
 
-        team_loss_file = os.path.join(output_dir, CHART_FILENAMES["team_contrarian_losses"]("league"))
+        team_loss_file = os.path.join(
+            output_dir, CHART_FILENAMES["team_contrarian_losses"]("league")
+        )
         plt.savefig(team_loss_file, dpi=300, bbox_inches="tight")
         plt.close()
         print(f"✓ Team contrarian losses analysis saved to: {team_loss_file}")
