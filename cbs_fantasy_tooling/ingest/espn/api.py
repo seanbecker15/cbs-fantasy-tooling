@@ -15,7 +15,7 @@ from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.models import GameResult, GameResults
 from cbs_fantasy_tooling.publishers import Publisher
 
-BASE_URL = "http://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 SEASON_TYPE_REGULAR = 2
 
 TEAM_MAPPING = {
@@ -70,9 +70,8 @@ class ESPNGameOutcomeApi:
     def __init__(self, season: int, session: Optional[requests.Session] = None):
         self.season = season
         self.session = session or requests.Session()
-        self.session.headers.update(
-            {"User-Agent": "Mozilla/5.0 (compatible; GameStatusFetcher/1.0)"}
-        )
+        # NOTE: ESPN's edge blocks browser-like User-Agents on this endpoint (403).
+        # The default requests UA is accepted, so do not override it.
 
     def fetch_game_results(
         self, week: int, season: Optional[int] = None, max_retries: int = 3
@@ -92,10 +91,13 @@ class ESPNGameOutcomeApi:
             raise ValueError(f"Invalid week number: {week}. Must be between 1 and 18.")
 
         target_season = season or self.season
+        # NOTE: the scoreboard endpoint ignores a "year" param and always returns
+        # the current season. "dates" is what actually selects the season, so
+        # historical backfills must use it.
         params = {
             "seasontype": SEASON_TYPE_REGULAR,
             "week": week,
-            "year": target_season,
+            "dates": target_season,
             "limit": 100,
         }
 
