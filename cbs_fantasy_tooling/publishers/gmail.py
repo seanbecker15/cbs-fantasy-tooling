@@ -1,10 +1,10 @@
-import os
 import base64
-from typing import Dict, Any
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
+import os
 from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -12,8 +12,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from . import Publisher
 from cbs_fantasy_tooling.models import PickemResults
+
+from . import Publisher
 
 
 class GmailPublisher(Publisher):
@@ -23,7 +24,7 @@ class GmailPublisher(Publisher):
         "https://www.googleapis.com/auth/gmail.readonly",
     ]
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         super().__init__(config)
         self.service = None
 

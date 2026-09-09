@@ -4,28 +4,26 @@ Competitor Intelligence Analysis
 Analyzes historical competitor pick patterns to identify strategies and find opportunities.
 """
 
-from typing import Dict, Optional
-
-from cbs_fantasy_tooling.analysis.data.loader import load_competitor_data
-from cbs_fantasy_tooling.analysis.data.enrichment import full_enrichment_pipeline
 from cbs_fantasy_tooling.analysis.competitor.competitor_classifier import (
-    build_player_profiles,
     analyze_league_composition,
+    build_player_profiles,
     get_top_performers,
 )
 from cbs_fantasy_tooling.analysis.competitor.contrarian_analyzer import (
-    find_contrarian_opportunities_from_data,
     analyze_contrarian_performance_history,
+    find_contrarian_opportunities_from_data,
 )
 from cbs_fantasy_tooling.analysis.competitor.field_adapter import (
     get_field_statistics,
 )
+from cbs_fantasy_tooling.analysis.data.enrichment import full_enrichment_pipeline
+from cbs_fantasy_tooling.analysis.data.loader import load_competitor_data
 
 
 def analyze_competitors(
     data_dir: str = "out",
-    week: Optional[int] = None,
-) -> Dict:
+    week: int | None = None,
+) -> dict:
     """
     Perform comprehensive competitor intelligence analysis.
 

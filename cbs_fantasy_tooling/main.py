@@ -1,20 +1,19 @@
-from enum import Enum
-from typing import List
 import threading
+from enum import Enum
 
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
 
-from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.analysis import (
-    run_strategy_simulation,
     analyze_competitors,
     analyze_contrarian_picks,
-    analyze_win_scenarios,
-    analyze_win_leaderboard,
-    analyze_user_win_percentage,
     analyze_player_style,
+    analyze_user_win_percentage,
+    analyze_win_leaderboard,
+    analyze_win_scenarios,
+    run_strategy_simulation,
 )
+from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pickem_results
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
 from cbs_fantasy_tooling.publishers import Publisher
@@ -49,7 +48,7 @@ class AnalysisType(str, Enum):
 
 
 # Global list to track background ingestion threads
-_background_threads: List[threading.Thread] = []
+_background_threads: list[threading.Thread] = []
 _threads_lock = threading.Lock()
 
 
@@ -107,7 +106,7 @@ def prompt_menu_choice() -> MenuOption:
     return MenuOption(choice)
 
 
-def ingest_flow(publishers: List[Publisher]):
+def ingest_flow(publishers: list[Publisher]):
     data_types = inquirer.checkbox(
         message="Select data type(s) to ingest",
         choices=[

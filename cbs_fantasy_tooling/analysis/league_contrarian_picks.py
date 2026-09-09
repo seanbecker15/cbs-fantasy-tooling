@@ -11,16 +11,16 @@ Where:
 
 """
 
-import sys
-import os
 import glob
+import os
+import sys
 
-import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.pyplot as plt
+import pandas as pd
 
-from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.analysis.data.loader import CompetitorDataLoader
+from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.publishers.file import JSON_FILENAMES
 
 # ============================================================================

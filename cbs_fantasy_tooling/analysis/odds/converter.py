@@ -1,6 +1,7 @@
 """Odds conversion and de-vig utilities."""
 
 from statistics import median
+
 import numpy as np
 
 

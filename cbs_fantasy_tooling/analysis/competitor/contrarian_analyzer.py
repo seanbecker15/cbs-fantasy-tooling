@@ -16,8 +16,8 @@ Usage:
     )
 """
 
-from typing import List, Dict
 from dataclasses import dataclass
+
 import pandas as pd
 
 
@@ -89,7 +89,7 @@ def find_contrarian_opportunities_from_data(
     min_consensus: float = 0.75,
     min_upset_probability: float = 0.35,
     max_opportunities: int = 3,
-) -> List[ContrarianOpportunity]:
+) -> list[ContrarianOpportunity]:
     """
     Find contrarian opportunities from historical data analysis.
 
@@ -167,7 +167,7 @@ def find_contrarian_opportunities_from_data(
     return opportunities[:max_opportunities]
 
 
-def analyze_contrarian_performance_history(enriched_picks: pd.DataFrame) -> Dict:
+def analyze_contrarian_performance_history(enriched_picks: pd.DataFrame) -> dict:
     """
     Analyze historical performance of contrarian picks.
 

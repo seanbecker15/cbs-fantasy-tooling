@@ -1,7 +1,8 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from dotenv import load_dotenv
 
 # The repository root: parent of the cbs_fantasy_tooling package. Every relative
@@ -11,7 +12,7 @@ from dotenv import load_dotenv
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _anchor(path: Optional[str]) -> Optional[str]:
+def _anchor(path: str | None) -> str | None:
     """Resolve a possibly-relative path against REPO_ROOT; absolute paths pass through."""
     if not path:
         return None
@@ -20,7 +21,7 @@ def _anchor(path: Optional[str]) -> Optional[str]:
 
 
 class Config:
-    def __init__(self, env_file: Optional[str] = None):
+    def __init__(self, env_file: str | None = None):
         self.env_path = Path(_anchor(env_file or ".env"))
         load_dotenv(self.env_path)
 
@@ -72,12 +73,12 @@ class Config:
         # Season configuration (year of the NFL season)
         self.season = int(os.getenv("SEASON", datetime.now().year))
 
-    def _parse_recipients(self, recipients_str: Optional[str]) -> List[str]:
+    def _parse_recipients(self, recipients_str: str | None) -> list[str]:
         if not recipients_str:
             return []
         return [email.strip() for email in recipients_str.split(",")]
 
-    def _parse_enabled_publishers(self) -> List[str]:
+    def _parse_enabled_publishers(self) -> list[str]:
         publishers_str = os.getenv("ENABLED_PUBLISHERS", "file,gmail")
         return [pub.strip().lower() for pub in publishers_str.split(",")]
 
@@ -98,7 +99,7 @@ class Config:
     def validate_database_config(self) -> bool:
         return bool(self.supabase_url and self.supabase_key)
 
-    def get_publisher_config(self, publisher_name: str) -> Dict[str, Any]:
+    def get_publisher_config(self, publisher_name: str) -> dict[str, Any]:
         """Get configuration specific to a publisher"""
         configs = {
             "gmail": {

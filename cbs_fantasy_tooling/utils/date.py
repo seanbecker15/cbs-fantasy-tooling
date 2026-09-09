@@ -2,7 +2,6 @@ from datetime import datetime, time, timedelta, timezone
 
 from cbs_fantasy_tooling import config
 
-
 MAX_WEEK = 18
 
 

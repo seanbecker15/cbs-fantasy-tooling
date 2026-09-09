@@ -49,4 +49,8 @@ line-length = 100
 # Pin the rule set explicitly. Ruff's defaults expanded in 0.16 and turned a
 # clean tree into 300 CI findings overnight; broaden this deliberately, not
 # by upgrade.
-select = ["E4", "E7", "E9", "F"]
+select = [
+    "E4", "E7", "E9", "F",
+    # Rules adopted after applying ruff's safe auto-fixes; enforced so they cannot regress.
+    "FURB105", "I001", "PIE790", "PLR1730", "RUF010", "RUF019", "RUF022", "UP006", "UP045",
+]

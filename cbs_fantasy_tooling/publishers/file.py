@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import shutil
-from typing import Dict, Any
+from typing import Any
 
 from cbs_fantasy_tooling.models import PickemResult, PickemResults
 
@@ -36,7 +36,7 @@ class FilePublisher(Publisher):
     name = "file"
     output_dir: str
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         super().__init__(config)
         self.output_dir = config.get("output_dir")
         os.makedirs(self.output_dir, exist_ok=True)

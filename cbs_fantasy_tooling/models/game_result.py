@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -8,17 +8,17 @@ class GameResult:
     """Represents a single NFL game status snapshot."""
 
     game_id: str
-    game_time: Optional[datetime]
+    game_time: datetime | None
     season: int
     week_number: int
     home_team: str
     away_team: str
     is_finished: bool
-    home_score: Optional[int]
-    away_score: Optional[int]
-    status_text: Optional[str]
-    winning_team: Optional[str]
-    losing_team: Optional[str]
+    home_score: int | None
+    away_score: int | None
+    status_text: str | None
+    winning_team: str | None
+    losing_team: str | None
 
     @staticmethod
     def from_dict(data: dict) -> "GameResult":
@@ -40,9 +40,9 @@ class GameResult:
             losing_team=data.get("losing_team"),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the record into a Supabase-compatible dictionary."""
-        record: Dict[str, Any] = {
+        record: dict[str, Any] = {
             "season": self.season,
             "week_number": self.week_number,
             "home_team": self.home_team,

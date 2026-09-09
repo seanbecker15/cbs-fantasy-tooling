@@ -2,7 +2,6 @@ from cbs_fantasy_tooling.ingest.cbs_sports.scrape import PickemIngestParams, ing
 from cbs_fantasy_tooling.publishers.factory import create_publishers
 from cbs_fantasy_tooling.utils.date import get_last_completed_week
 
-
 if __name__ == "__main__":
     target_week = get_last_completed_week()
     current_week = target_week + 1

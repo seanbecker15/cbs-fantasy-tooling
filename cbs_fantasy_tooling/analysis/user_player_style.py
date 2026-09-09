@@ -3,13 +3,14 @@
 import glob
 import json
 import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from matplotlib import ticker
 
-from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.analysis.data.loader import CompetitorDataLoader
+from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.publishers.file import CHART_FILENAMES, JSON_FILENAMES
 
 

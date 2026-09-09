@@ -1,7 +1,8 @@
 """Slate validation and display utilities."""
 
 import sys
-from cbs_fantasy_tooling.analysis.core.config import SLATE_MIN_GAMES, SLATE_MAX_GAMES
+
+from cbs_fantasy_tooling.analysis.core.config import SLATE_MAX_GAMES, SLATE_MIN_GAMES
 
 
 def validate_slate(mapping: list[dict], min_g=SLATE_MIN_GAMES, max_g=SLATE_MAX_GAMES):

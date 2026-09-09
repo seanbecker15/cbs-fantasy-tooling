@@ -137,9 +137,11 @@ CREATE POLICY "Enable delete for all users" ON game_status FOR DELETE USING (tru
 -- Note: Realtime is enabled per-table in Supabase dashboard settings
 """
 
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
-from supabase import create_client, Client
+from typing import Any
+
+from supabase import Client, create_client
+
 from cbs_fantasy_tooling.models import GameResult, PickemResult, PickemResults
 
 
@@ -248,7 +250,7 @@ class SupabaseDatabase:
             traceback.print_exc()
             return False
 
-    def upsert_game_statuses(self, game_statuses: List[Dict[str, Any]]) -> bool:
+    def upsert_game_statuses(self, game_statuses: list[dict[str, Any]]) -> bool:
         """
         Upsert game status records into Supabase.
 
@@ -283,7 +285,7 @@ class SupabaseDatabase:
             traceback.print_exc()
             return False
 
-    def update_player_picks_from_game_statuses(self, game_results: List[GameResult]) -> bool:
+    def update_player_picks_from_game_statuses(self, game_results: list[GameResult]) -> bool:
         """
         Update player picks with opponent, game time, and correctness info.
 
@@ -311,7 +313,7 @@ class SupabaseDatabase:
                 ]
 
                 for team, opponent in team_pairs:
-                    update_payload: Dict[str, Any] = {
+                    update_payload: dict[str, Any] = {
                         "opponent_team": opponent,
                         "updated_at": timestamp,
                         "is_correct": None,
@@ -351,7 +353,7 @@ class SupabaseDatabase:
             traceback.print_exc()
             return False
 
-    def get_results(self, week_number: int, season: int = None) -> Optional[PickemResults]:
+    def get_results(self, week_number: int, season: int = None) -> PickemResults | None:
         """
         Retrieve results for a specific week from database.
 
@@ -422,7 +424,7 @@ class SupabaseDatabase:
             traceback.print_exc()
             return None
 
-    def get_latest_week(self, season: int = None) -> Optional[int]:
+    def get_latest_week(self, season: int = None) -> int | None:
         """
         Get the latest week number in the database.
 
@@ -504,7 +506,7 @@ class SupabaseDatabase:
 
 def compare_results(
     old_results: list[PickemResult], new_results: list[PickemResult]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Deep comparison of two result sets to detect changes.
 

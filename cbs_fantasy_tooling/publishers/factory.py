@@ -1,4 +1,3 @@
-from typing import List
 from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.database import DatabasePublisher
@@ -8,7 +7,7 @@ from cbs_fantasy_tooling.publishers.gmail import GmailPublisher
 
 def create_publishers():
     """Create and return list of enabled publishers"""
-    publishers: List[Publisher] = []
+    publishers: list[Publisher] = []
 
     # File publisher (always safe to include)
     if config.is_publisher_enabled("file"):

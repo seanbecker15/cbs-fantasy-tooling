@@ -10,12 +10,11 @@ Strategy Types:
 - AGGRESSIVE_CONTRARIAN: Frequent contrarian plays (25%+ contrarian rate)
 """
 
-from enum import Enum
-from typing import List, Dict
 from dataclasses import dataclass
+from enum import Enum
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 class StrategyType(str, Enum):
@@ -64,7 +63,7 @@ def classify_player_strategy(player_picks: pd.DataFrame) -> StrategyType:
         return StrategyType.AGGRESSIVE_CONTRARIAN
 
 
-def calculate_player_metrics(player_picks: pd.DataFrame) -> Dict:
+def calculate_player_metrics(player_picks: pd.DataFrame) -> dict:
     """
     Calculate comprehensive metrics for a player.
 
@@ -111,7 +110,7 @@ def calculate_player_metrics(player_picks: pd.DataFrame) -> Dict:
     }
 
 
-def build_player_profiles(enriched_picks_df: pd.DataFrame) -> List[Dict]:
+def build_player_profiles(enriched_picks_df: pd.DataFrame) -> list[dict]:
     """
     Build strategy profiles for all players.
 
@@ -140,7 +139,7 @@ def build_player_profiles(enriched_picks_df: pd.DataFrame) -> List[Dict]:
     return profiles
 
 
-def analyze_league_composition(profiles: List[Dict]) -> Dict:
+def analyze_league_composition(profiles: list[dict]) -> dict:
     """
     Analyze overall league strategy composition.
 
@@ -166,7 +165,7 @@ def analyze_league_composition(profiles: List[Dict]) -> Dict:
     }
 
 
-def get_top_performers(profiles: List[Dict], n: int = 10) -> List[Dict]:
+def get_top_performers(profiles: list[dict], n: int = 10) -> list[dict]:
     """
     Get top N performers by average points per week.
 
@@ -181,7 +180,7 @@ def get_top_performers(profiles: List[Dict], n: int = 10) -> List[Dict]:
     return sorted_profiles[:n]
 
 
-def get_players_by_strategy(profiles: List[Dict], strategy: StrategyType) -> List[Dict]:
+def get_players_by_strategy(profiles: list[dict], strategy: StrategyType) -> list[dict]:
     """
     Filter players by strategy type.
 

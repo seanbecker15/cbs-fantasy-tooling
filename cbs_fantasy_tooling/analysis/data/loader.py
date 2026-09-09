@@ -12,10 +12,9 @@ Output Format:
 - weekly_stats_df: Week-level aggregate statistics
 """
 
-import json
 import glob
+import json
 import os
-from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -31,10 +30,10 @@ class WeekData:
     week_number: int
     timestamp: datetime
     max_wins_value: int
-    max_wins_players: List[str]
+    max_wins_players: list[str]
     max_points_value: int
-    max_points_players: List[str]
-    player_results: List[Dict]
+    max_points_players: list[str]
+    player_results: list[dict]
 
 
 class CompetitorDataLoader:
@@ -56,10 +55,10 @@ class CompetitorDataLoader:
             data_dir: Directory containing week_*_results_*.json files
         """
         self.data_dir = data_dir
-        self.weeks_data: Dict[int, WeekData] = {}
-        self.picks_df: Optional[pd.DataFrame] = None
-        self.players_df: Optional[pd.DataFrame] = None
-        self.weekly_stats_df: Optional[pd.DataFrame] = None
+        self.weeks_data: dict[int, WeekData] = {}
+        self.picks_df: pd.DataFrame | None = None
+        self.players_df: pd.DataFrame | None = None
+        self.weekly_stats_df: pd.DataFrame | None = None
 
     def load_all_weeks(self) -> None:
         """
@@ -292,7 +291,7 @@ class CompetitorDataLoader:
 
         return consensus
 
-    def get_player_picks(self, player_name: str, week: Optional[int] = None) -> pd.DataFrame:
+    def get_player_picks(self, player_name: str, week: int | None = None) -> pd.DataFrame:
         """
         Get picks for a specific player, optionally filtered by week.
 
@@ -313,7 +312,7 @@ class CompetitorDataLoader:
 
         return picks.sort_values(["week", "confidence"], ascending=[True, False])
 
-    def load_and_build_all(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def load_and_build_all(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Convenience method to load all data and build all DataFrames.
 
@@ -328,7 +327,7 @@ class CompetitorDataLoader:
         return picks_df, players_df, weekly_stats_df
 
 
-def load_competitor_data(data_dir: str = "out") -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_competitor_data(data_dir: str = "out") -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Convenience function to load all competitor data.
 

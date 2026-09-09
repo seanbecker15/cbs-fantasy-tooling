@@ -2,7 +2,6 @@
 
 import os
 import re
-from typing import Dict, List, Optional
 
 from matplotlib import pyplot as plt
 from supabase import create_client
@@ -16,7 +15,7 @@ def _slugify(name: str) -> str:
     return slug or "player"
 
 
-def analyze_user_win_percentage(player_name: Optional[str] = None) -> Optional[str]:
+def analyze_user_win_percentage(player_name: str | None = None) -> str | None:
     """
     Plot a user's win% across the season and print summary metrics.
 
@@ -41,13 +40,13 @@ def analyze_user_win_percentage(player_name: Optional[str] = None) -> Optional[s
         .execute()
     )
 
-    rows: List[Dict] = response.data or []
+    rows: list[dict] = response.data or []
     if not rows:
         print(f"No results found for {target} in season {config.season}.")
         return None
 
-    weeks: List[int] = []
-    win_pcts: List[float] = []
+    weeks: list[int] = []
+    win_pcts: list[float] = []
     total_wins = 0
     total_losses = 0
 

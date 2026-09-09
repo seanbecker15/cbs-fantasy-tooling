@@ -8,22 +8,21 @@ import glob
 import json
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
 
-from matplotlib import pyplot as plt
 import squarify
-from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
+from matplotlib import pyplot as plt
+from supabase import Client, create_client
+
+from cbs_fantasy_tooling.analysis.core.config import SHARP_BOOKS, SHARP_WEIGHT
 from cbs_fantasy_tooling.analysis.odds.converter import (
     consensus_moneyline_probs,
     rows_to_game_probs,
 )
-from cbs_fantasy_tooling.analysis.core.config import SHARP_BOOKS, SHARP_WEIGHT
-from cbs_fantasy_tooling.utils.date import get_commence_time_from, get_commence_time_to
 from cbs_fantasy_tooling.analysis.team_normalization import normalize_team_name
-from supabase import Client, create_client
-
 from cbs_fantasy_tooling.config import config
+from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
 from cbs_fantasy_tooling.publishers.file import CHART_FILENAMES
+from cbs_fantasy_tooling.utils.date import get_commence_time_from, get_commence_time_to
 
 
 @dataclass
@@ -33,8 +32,8 @@ class Pick:
     player_name: str
     team: str
     confidence_points: int
-    is_correct: Optional[bool]
-    opponent_team: Optional[str]
+    is_correct: bool | None
+    opponent_team: str | None
 
 
 @dataclass
@@ -43,13 +42,13 @@ class PlayerScore:
 
     player_name: str
     current_points: int
-    pending_picks: List[Pick]
+    pending_picks: list[Pick]
 
-    def calculate_total(self, outcome_map: Dict[str, bool]) -> int:
+    def calculate_total(self, outcome_map: dict[str, bool]) -> int:
         """Calculate total points given outcomes for pending games."""
         total = self.current_points
         for pick in self.pending_picks:
-            if pick.team in outcome_map and outcome_map[pick.team]:
+            if outcome_map.get(pick.team):
                 total += pick.confidence_points
         return total
 
@@ -61,7 +60,7 @@ class WinScenarioAnalyzer:
         self.client = client
         self.season = season
 
-    def get_player_picks(self, week: int, player_name: Optional[str] = None) -> List[Pick]:
+    def get_player_picks(self, week: int, player_name: str | None = None) -> list[Pick]:
         """Get picks for a specific week, optionally filtered by player."""
         query = (
             self.client.table("player_picks")
@@ -85,12 +84,12 @@ class WinScenarioAnalyzer:
             for row in response.data
         ]
 
-    def get_player_scores(self, week: int) -> Dict[str, PlayerScore]:
+    def get_player_scores(self, week: int) -> dict[str, PlayerScore]:
         """Get current scores and pending picks for all players."""
         all_picks = self.get_player_picks(week)
 
         # Group by player
-        picks_by_player: Dict[str, List[Pick]] = {}
+        picks_by_player: dict[str, list[Pick]] = {}
         for pick in all_picks:
             picks_by_player.setdefault(pick.player_name, []).append(pick)
 
@@ -108,11 +107,11 @@ class WinScenarioAnalyzer:
 
         return player_scores
 
-    def get_pending_games(self, week: int) -> List[Tuple[str, str]]:
+    def get_pending_games(self, week: int) -> list[tuple[str, str]]:
         """Get list of pending games (both teams involved)."""
         all_picks = self.get_player_picks(week)
 
-        pending_games: Set[Tuple[str, str]] = set()
+        pending_games: set[tuple[str, str]] = set()
         for pick in all_picks:
             if pick.is_correct is None and pick.opponent_team:
                 # Store as sorted tuple to avoid duplicates
@@ -121,7 +120,7 @@ class WinScenarioAnalyzer:
 
         return list(pending_games)
 
-    def get_game_probabilities(self, week: int) -> Dict[Tuple[str, str], float]:
+    def get_game_probabilities(self, week: int) -> dict[tuple[str, str], float]:
         """Get win probabilities for pending games from latest predictions."""
         pattern = f"{config.output_dir}/week_{week}_predictions_chalk_*.json"
         files = glob.glob(pattern)
@@ -152,8 +151,8 @@ class WinScenarioAnalyzer:
             return {}
 
     def _build_game_probabilities_from_odds(
-        self, pending_games: List[Tuple[str, str]]
-    ) -> Dict[tuple[str, str], float]:
+        self, pending_games: list[tuple[str, str]]
+    ) -> dict[tuple[str, str], float]:
         """Fetch odds once and build a team-pair -> win prob map, normalized to pending teams."""
         try:
             events = fetch_odds(get_commence_time_from(), get_commence_time_to())
@@ -161,7 +160,7 @@ class WinScenarioAnalyzer:
             _, mapping = rows_to_game_probs(rows)
             # Build available teams from pending games (abbreviations)
             available_teams = list({team for game in pending_games for team in game})
-            game_probs: Dict[tuple[str, str], float] = {}
+            game_probs: dict[tuple[str, str], float] = {}
             matched = 0
             mismatched = 0
             for m in mapping:
@@ -190,9 +189,9 @@ class WinScenarioAnalyzer:
         week: int,
         target_player: str,
         detailed: bool = False,
-        game_probabilities: Dict[tuple[str, str], float] | None = None,
+        game_probabilities: dict[tuple[str, str], float] | None = None,
         use_actual_probabilities: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """Analyze all possible win scenarios for a player."""
         player_scores = self.get_player_scores(week)
 
@@ -239,7 +238,7 @@ class WinScenarioAnalyzer:
         target_player_picks = self.get_player_picks(week, target_player)
 
         for outcome_idx in range(num_scenarios):
-            outcome_map: Dict[str, bool] = {}
+            outcome_map: dict[str, bool] = {}
             scenario_prob = 1.0
 
             for game_idx, (team1, team2) in enumerate(pending_games):
@@ -342,10 +341,10 @@ class WinScenarioAnalyzer:
 
     def _build_winning_combinations(
         self,
-        scenarios: List[Dict],
-        relevant_picks: List[Pick],
-        pending_games: List[Tuple[str, str]],
-    ) -> List[Dict]:
+        scenarios: list[dict],
+        relevant_picks: list[Pick],
+        pending_games: list[tuple[str, str]],
+    ) -> list[dict]:
         """Build detailed winning combinations."""
         combinations = []
         for scenario in scenarios:
@@ -390,10 +389,10 @@ class WinScenarioAnalyzer:
 
     def _build_meta_analysis(
         self,
-        scenarios: List[Dict],
-        relevant_picks: List[Pick],
-        pending_games: List[Tuple[str, str]],
-    ) -> Dict:
+        scenarios: list[dict],
+        relevant_picks: list[Pick],
+        pending_games: list[tuple[str, str]],
+    ) -> dict:
         """Build meta-analysis showing game criticality across all winning scenarios."""
         game_stats = {}
         total_scenarios = len(scenarios)
@@ -473,7 +472,7 @@ class WinScenarioAnalyzer:
 
         return categories
 
-    def analyze_leaderboard(self, week: int) -> Dict:
+    def analyze_leaderboard(self, week: int) -> dict:
         """Analyze win scenarios for all players and return leaderboard."""
         player_scores = self.get_player_scores(week)
         if not player_scores:
@@ -539,7 +538,7 @@ class WinScenarioAnalyzer:
         }
 
 
-def _save_win_leaderboard_chart(result: Dict) -> Optional[str]:
+def _save_win_leaderboard_chart(result: dict) -> str | None:
     """Save win probability charts (50/50 and odds-based if available)."""
     leaderboard_naive = result.get("leaderboard", [])
     leaderboard_odds = result.get("leaderboard_odds", [])
@@ -550,7 +549,7 @@ def _save_win_leaderboard_chart(result: Dict) -> Optional[str]:
     def _sanitize(label: str) -> str:
         return label.replace("$", r"\$")
 
-    def _collapse_small(entries: list[Dict]) -> list[Dict]:
+    def _collapse_small(entries: list[dict]) -> list[dict]:
         """Group players with <=1% win probability into a single 'Other' bucket."""
         main = []
         other_prob = 0.0

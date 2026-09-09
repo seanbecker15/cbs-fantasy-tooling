@@ -4,10 +4,10 @@ ESPN game status fetcher for NFL schedules and live scores.
 Provides normalized game status records suitable for Supabase persistence.
 """
 
+import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-import time
+from typing import Any
 
 import requests
 
@@ -67,15 +67,15 @@ TEAM_MAPPING = {
 class ESPNGameOutcomeApi:
     """Fetches NFL game status data from the ESPN scoreboard API."""
 
-    def __init__(self, season: int, session: Optional[requests.Session] = None):
+    def __init__(self, season: int, session: requests.Session | None = None):
         self.season = season
         self.session = session or requests.Session()
         # NOTE: ESPN's edge blocks browser-like User-Agents on this endpoint (403).
         # The default requests UA is accepted, so do not override it.
 
     def fetch_game_results(
-        self, week: int, season: Optional[int] = None, max_retries: int = 3
-    ) -> List[GameResult]:
+        self, week: int, season: int | None = None, max_retries: int = 3
+    ) -> list[GameResult]:
         """
         Fetch game status data for a specific week.
 
@@ -125,9 +125,9 @@ class ESPNGameOutcomeApi:
         """Normalize ESPN team abbreviation to standard form."""
         return TEAM_MAPPING.get(espn_abbrev.upper(), espn_abbrev.upper())
 
-    def _parse_response(self, data: Dict[str, Any], week: int, season: int) -> List[GameResult]:
+    def _parse_response(self, data: dict[str, Any], week: int, season: int) -> list[GameResult]:
         """Convert ESPN JSON payload into GameStatusRecord objects."""
-        records: List[GameResult] = []
+        records: list[GameResult] = []
 
         for event in data.get("events", []):
             try:
@@ -147,7 +147,7 @@ class ESPNGameOutcomeApi:
 
         return records
 
-    def _parse_event(self, event: Dict[str, Any], week: int, season: int) -> Optional[GameResult]:
+    def _parse_event(self, event: dict[str, Any], week: int, season: int) -> GameResult | None:
         """Parse individual event into a GameStatusRecord."""
         competitions = event.get("competitions", [])
         if not competitions:
@@ -158,8 +158,8 @@ class ESPNGameOutcomeApi:
         if len(competitors) != 2:
             return None
 
-        home_team: Optional[Dict[str, Any]] = None
-        away_team: Optional[Dict[str, Any]] = None
+        home_team: dict[str, Any] | None = None
+        away_team: dict[str, Any] | None = None
 
         for competitor in competitors:
             team_abbrev = self._normalize_team_abbrev(
@@ -214,7 +214,7 @@ class ESPNGameOutcomeApi:
         )
 
     @staticmethod
-    def _parse_datetime(timestamp: Optional[str]) -> Optional[datetime]:
+    def _parse_datetime(timestamp: str | None) -> datetime | None:
         """Safely parse ISO8601 timestamp strings."""
         if not timestamp:
             return None
@@ -224,7 +224,7 @@ class ESPNGameOutcomeApi:
             return None
 
     @staticmethod
-    def _parse_score(score: Optional[str]) -> Optional[int]:
+    def _parse_score(score: str | None) -> int | None:
         """Convert score strings to integers, handling blanks."""
         if score is None or score == "":
             return None
@@ -236,11 +236,11 @@ class ESPNGameOutcomeApi:
     @staticmethod
     def _determine_winner(
         is_finished: bool,
-        home_score: Optional[int],
-        away_score: Optional[int],
+        home_score: int | None,
+        away_score: int | None,
         home_team: str,
         away_team: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Determine winning team abbreviation when available."""
         if not is_finished:
             return None
@@ -256,11 +256,11 @@ class ESPNGameOutcomeApi:
     @staticmethod
     def _determine_loser(
         is_finished: bool,
-        home_score: Optional[int],
-        away_score: Optional[int],
+        home_score: int | None,
+        away_score: int | None,
         home_team: str,
         away_team: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Determine losing team abbreviation when available."""
         if not is_finished:
             return None
@@ -274,7 +274,7 @@ class ESPNGameOutcomeApi:
         return home_team if home_score < away_score else away_team
 
 
-def fetch_game_results(weeks: List[int]) -> Dict[int, List[GameResult]]:
+def fetch_game_results(weeks: list[int]) -> dict[int, list[GameResult]]:
     """
     Fetch results for multiple weeks.
 
@@ -301,16 +301,16 @@ def fetch_game_results(weeks: List[int]) -> Dict[int, List[GameResult]]:
 
 @dataclass
 class GameOutcomeIngestParams:
-    weeks: List[int]
+    weeks: list[int]
     poll_interval: int | None = None
 
 
 def ingest_game_outcomes(
     params: GameOutcomeIngestParams,
-    publishers: List[Publisher],
+    publishers: list[Publisher],
 ):
     """Ingest game outcomes for one or multiple weeks using the provided API."""
-    last_snapshot: Dict[int, List[dict]] = {}
+    last_snapshot: dict[int, list[dict]] = {}
     api = ESPNGameOutcomeApi(season=config.season)
     weeks = sorted(set(params.weeks))
 

@@ -1,6 +1,7 @@
 """Confidence pool betting strategies."""
 
 import random
+
 import numpy as np
 
 

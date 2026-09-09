@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
-from cbs_fantasy_tooling.models import PickemResults, GameResults
+from cbs_fantasy_tooling.models import GameResults, PickemResults
 
 
 class Publisher(ABC):
@@ -9,7 +9,7 @@ class Publisher(ABC):
 
     name: str
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
 
     @abstractmethod
@@ -20,7 +20,6 @@ class Publisher(ABC):
         Returns:
             bool: True if configuration is valid, False otherwise
         """
-        pass
 
     def publish_pickem_results(self, results_data: PickemResults) -> bool:
         """

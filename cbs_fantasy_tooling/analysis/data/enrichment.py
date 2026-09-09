@@ -7,10 +7,9 @@ contrarian picks based on field consensus and actual game results.
 This is critical business logic - tested comprehensively.
 """
 
-import json
 import glob
+import json
 import os
-from typing import Tuple
 
 import pandas as pd
 
@@ -244,7 +243,7 @@ def mark_contrarian_picks(picks_df: pd.DataFrame, favorites_df: pd.DataFrame) ->
 
 def full_enrichment_pipeline(
     picks_df: pd.DataFrame, data_dir: str = "out"
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Complete enrichment pipeline.
 

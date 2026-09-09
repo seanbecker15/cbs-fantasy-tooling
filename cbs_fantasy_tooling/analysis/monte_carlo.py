@@ -4,12 +4,9 @@ Confidence Pool Strategy Simulator
 Main orchestration for running Monte Carlo simulations of confidence pool strategies.
 """
 
-from typing import Dict, Optional
-from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-
-from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
+from matplotlib import pyplot as plt
 
 from cbs_fantasy_tooling.analysis.core.config import (
     N_SIMS,
@@ -17,27 +14,28 @@ from cbs_fantasy_tooling.analysis.core.config import (
     SHARP_WEIGHT,
     get_field_composition,
 )
-from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 from cbs_fantasy_tooling.analysis.core.simulator import simulate_many_weeks
+from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 from cbs_fantasy_tooling.analysis.odds.converter import (
     consensus_moneyline_probs,
     rows_to_game_probs,
 )
-from cbs_fantasy_tooling.analysis.utils.validation import validate_slate
+from cbs_fantasy_tooling.analysis.user.analysis import analyze_user_picks, simulate_user_picks
 from cbs_fantasy_tooling.analysis.utils.storage import save_predictions
-from cbs_fantasy_tooling.analysis.user.analysis import simulate_user_picks, analyze_user_picks
+from cbs_fantasy_tooling.analysis.utils.validation import validate_slate
+from cbs_fantasy_tooling.config import config
+from cbs_fantasy_tooling.ingest.the_odds_api.api import fetch_odds
+from cbs_fantasy_tooling.publishers.file import CHART_FILENAMES, CSV_FILENAMES
 from cbs_fantasy_tooling.utils.date import (
     get_commence_time_from,
     get_commence_time_to,
     get_current_week,
 )
-from cbs_fantasy_tooling.publishers.file import CHART_FILENAMES, CSV_FILENAMES
-from cbs_fantasy_tooling.config import config
 
 
 def run_strategy_simulation(
-    user_picks: Optional[str | list] = None, analyze_only: bool = False, n_sims: int = N_SIMS
-) -> Dict:
+    user_picks: str | list | None = None, analyze_only: bool = False, n_sims: int = N_SIMS
+) -> dict:
     """
     Run Monte Carlo simulation of confidence pool strategies.
 

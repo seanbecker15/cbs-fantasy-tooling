@@ -11,20 +11,18 @@ Usage:
     # Returns: {"Chalk-MaxPoints": 17, "Slight-Contrarian": 14, "Aggressive-Contrarian": 1}
 """
 
-from typing import Dict, Optional
-
-from cbs_fantasy_tooling.config import config
-from cbs_fantasy_tooling.analysis.data.loader import load_competitor_data
-from cbs_fantasy_tooling.analysis.data.enrichment import full_enrichment_pipeline
 from cbs_fantasy_tooling.analysis.competitor.competitor_classifier import (
-    build_player_profiles,
     analyze_league_composition,
+    build_player_profiles,
 )
+from cbs_fantasy_tooling.analysis.data.enrichment import full_enrichment_pipeline
+from cbs_fantasy_tooling.analysis.data.loader import load_competitor_data
+from cbs_fantasy_tooling.config import config
 
 
 def get_actual_field_composition(
-    data_dir: Optional[str] = None, exclude_user: str = None
-) -> Dict[str, int]:
+    data_dir: str | None = None, exclude_user: str = None
+) -> dict[str, int]:
     """
     Get actual league field composition from historical data.
 
@@ -60,7 +58,7 @@ def get_actual_field_composition(
     }
 
 
-def get_field_statistics(data_dir: Optional[str] = None) -> Dict:
+def get_field_statistics(data_dir: str | None = None) -> dict:
     """
     Get comprehensive field statistics for analysis.
 
@@ -104,7 +102,7 @@ def get_field_statistics(data_dir: Optional[str] = None) -> Dict:
     }
 
 
-def compare_theoretical_vs_actual() -> Dict:
+def compare_theoretical_vs_actual() -> dict:
     """
     Compare theoretical assumptions vs actual field composition.
 
@@ -122,9 +120,7 @@ def compare_theoretical_vs_actual() -> Dict:
     actual = get_actual_field_composition()
 
     # Calculate differences
-    differences = {
-        strategy: actual[strategy] - theoretical[strategy] for strategy in theoretical.keys()
-    }
+    differences = {strategy: actual[strategy] - theoretical[strategy] for strategy in theoretical}
 
     return {
         "theoretical": theoretical,
@@ -194,7 +190,7 @@ if __name__ == "__main__":
     print("```python")
     print("# Use actual field composition from historical data")
     print("from field_adapter import get_actual_field_composition")
-    print("")
+    print()
     print("STRATEGY_MIX = get_actual_field_composition()")
     print("# Auto-loads from out/ directory, analyzes all players")
     print("# Returns: {'Chalk-MaxPoints': 17, 'Slight-Contrarian': 14, 'Aggressive-Contrarian': 1}")

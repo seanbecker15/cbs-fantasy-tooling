@@ -1,7 +1,9 @@
 """Monte Carlo simulation engine for confidence pool strategies."""
 
 import random
+
 import numpy as np
+
 from cbs_fantasy_tooling.analysis.core.config import N_OTHERS, TIE_RULE
 from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 

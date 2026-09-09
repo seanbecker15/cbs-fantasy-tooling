@@ -1,10 +1,12 @@
 """User pick analysis and simulation."""
 
 import random
+
 import numpy as np
-from cbs_fantasy_tooling.analysis.user.picks import parse_user_picks, create_user_strategy
+
 from cbs_fantasy_tooling.analysis.core.config import N_SIMS
 from cbs_fantasy_tooling.analysis.core.simulator import build_field, simulate_week_once
+from cbs_fantasy_tooling.analysis.user.picks import create_user_strategy, parse_user_picks
 
 
 def simulate_user_picks(

@@ -37,7 +37,7 @@ def validate_user_picks(
             normalized = normalize_team_name(pick, all_teams)
             normalized_picks.append(normalized)
         except ValueError as e:
-            errors.append(f"Pick {i}: {str(e)}")
+            errors.append(f"Pick {i}: {e!s}")
 
     # Check for duplicates
     if len(set(normalized_picks)) != len(normalized_picks):

@@ -1,22 +1,23 @@
+import select
+import sys
 from dataclasses import dataclass
 from datetime import datetime
-import sys
-import select
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.options import Options
 from time import sleep
 from urllib.parse import quote
 
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.models import PickemResult, PickemResults
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.database import DatabasePublisher
 from cbs_fantasy_tooling.storage.providers.database import compare_results
-from cbs_fantasy_tooling.config import config
 
 STANDINGS_URL_TEMPLATE = (
     "https://picks.cbssports.com/football/pickem/pools/{slug}/standings/weekly?device=desktop"
@@ -188,8 +189,7 @@ def print_csv(results):
 def print_most_wins(results):
     max_wins = 0
     for row in results:
-        if row.results[1] > max_wins:
-            max_wins = row.results[1]
+        max_wins = max(max_wins, row.results[1])
     players_with_max_wins = [row.name for row in results if row.results[1] == max_wins]
     print(f"Most wins for the week: {max_wins}")
     print(f"Players with the most wins: {', '.join(players_with_max_wins)}")
@@ -199,8 +199,7 @@ def print_most_points(results):
     max_points = 0
     for row in results:
         curr_row_points = int(row.results[0])
-        if curr_row_points > max_points:
-            max_points = curr_row_points
+        max_points = max(max_points, curr_row_points)
     players_with_max_points = [row.name for row in results if int(row.results[0]) == max_points]
     print(f"Most points for the week: {max_points}")
     print(f"Players with the most points: {', '.join(players_with_max_points)}")

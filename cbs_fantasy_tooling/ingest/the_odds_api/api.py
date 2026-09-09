@@ -1,4 +1,5 @@
 from datetime import datetime
+
 import requests
 
 from cbs_fantasy_tooling import config

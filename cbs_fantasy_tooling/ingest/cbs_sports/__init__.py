@@ -1,5 +1,5 @@
 """Ingest layer for CBS Sports data sources."""
 
-from .scrape import ingest_pickem_results, PickemIngestParams
+from .scrape import PickemIngestParams, ingest_pickem_results
 
-__all__ = ["ingest_pickem_results", "PickemIngestParams"]
+__all__ = ["PickemIngestParams", "ingest_pickem_results"]

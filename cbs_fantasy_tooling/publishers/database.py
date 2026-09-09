@@ -2,8 +2,9 @@
 Database publisher for storing fantasy football results in Supabase.
 """
 
-from typing import Dict, Any
-from cbs_fantasy_tooling.models import PickemResults, GameResults
+from typing import Any
+
+from cbs_fantasy_tooling.models import GameResults, PickemResults
 from cbs_fantasy_tooling.storage.providers.database import SupabaseDatabase
 
 from . import Publisher
@@ -14,7 +15,7 @@ class DatabasePublisher(Publisher):
 
     name = "database"
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         """
         Initialize database publisher.
 
