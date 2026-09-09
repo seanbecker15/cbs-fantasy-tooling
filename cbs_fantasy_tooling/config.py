@@ -1,20 +1,38 @@
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
+# The repository root: parent of the cbs_fantasy_tooling package. Every relative
+# path in config is anchored here so behaviour does not depend on the CWD -
+# scratch scripts and the scheduled job would otherwise silently load no
+# secrets and write output to the wrong place.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _anchor(path: Optional[str]) -> Optional[str]:
+    """Resolve a possibly-relative path against REPO_ROOT; absolute paths pass through."""
+    if not path:
+        return None
+    p = Path(path)
+    return str(p if p.is_absolute() else REPO_ROOT / p)
+
 
 class Config:
-    def __init__(self, env_file: str = ".env"):
-        load_dotenv(env_file)
+    def __init__(self, env_file: Optional[str] = None):
+        self.env_path = Path(_anchor(env_file or ".env"))
+        load_dotenv(self.env_path)
 
         # Scraping configuration
         self.email = os.getenv("EMAIL")
         self.password = os.getenv("PASSWORD")
 
         # Gmail API configuration
-        self.gmail_credentials_file = os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json")
-        self.gmail_token_file = os.getenv("GMAIL_TOKEN_FILE", "token.json")
+        self.gmail_credentials_file = _anchor(
+            os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json")
+        )
+        self.gmail_token_file = _anchor(os.getenv("GMAIL_TOKEN_FILE", "token.json"))
         self.gmail_from = os.getenv("GMAIL_FROM")
 
         # SendGrid configuration (legacy)
@@ -23,13 +41,13 @@ class Config:
         self.notification_to = self._parse_recipients(os.getenv("NOTIFICATION_TO"))
 
         # File storage configuration
-        self.output_dir = os.getenv("OUTPUT_DIR", "data")
-        self.backup_dir = os.getenv("BACKUP_DIR", None)
+        self.output_dir = _anchor(os.getenv("OUTPUT_DIR", "data"))
+        self.backup_dir = _anchor(os.getenv("BACKUP_DIR"))
 
         # Historical data used to model the field (prior seasons). Output files are
         # not season-scoped by name, so a new season's ingest would otherwise
         # overwrite the history the competitor model is built from.
-        self.history_dir = os.getenv("HISTORY_DIR") or self.output_dir
+        self.history_dir = _anchor(os.getenv("HISTORY_DIR")) or self.output_dir
 
         # Publisher configuration - which publishers to use
         self.enabled_publishers = self._parse_enabled_publishers()
