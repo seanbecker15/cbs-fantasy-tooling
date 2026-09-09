@@ -2,7 +2,7 @@
 
 import random
 import numpy as np
-from cbs_fantasy_tooling.analysis.core.config import BONUS_SPLIT_TIES, N_OTHERS
+from cbs_fantasy_tooling.analysis.core.config import N_OTHERS, TIE_RULE
 from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 
 
@@ -32,35 +32,43 @@ def build_field(others_mix, n_others=N_OTHERS):
     return others
 
 
-def _apply_bonuses(wins, points):
+def _apply_bonuses(wins, points, rule=None, rng=None):
     """
-    Calculate bonus points for most wins and most points.
+    Calculate bonus points for most wins (+5) and most points (+10).
 
-    Returns arrays for most_wins_bonus, most_points_bonus, given global BONUS_SPLIT_TIES.
-    +5 for Most Wins, +10 for Most Points; either full to ties or split equally.
+    Ties are resolved according to `rule` (defaults to config TIE_RULE):
+    "single" pays one tied player chosen at random, "all" pays every tied
+    player in full, "split" divides the bonus evenly.
 
     Args:
         wins: Array of win counts per player
         points: Array of base points per player
+        rule: Tie rule override, mainly for tests and comparison runs
+        rng: numpy Generator for the "single" tiebreak; a fresh one if omitted
 
     Returns:
         Tuple of (most_wins_bonus, most_points_bonus) arrays
     """
-    max_w = wins.max()
-    max_p = points.max()
-    idx_w = np.where(wins == max_w)[0]
-    idx_p = np.where(points == max_p)[0]
+    rule = rule or TIE_RULE
+    if rule not in ("single", "all", "split"):
+        raise ValueError(f"Unknown TIE_RULE {rule!r}; expected single, all or split")
+    if rng is None:
+        rng = np.random.default_rng()
 
-    if BONUS_SPLIT_TIES:
-        mw_each = 5.0 / len(idx_w)
-        mp_each = 10.0 / len(idx_p)
-        most_wins_bonus = np.zeros_like(points, dtype=float)
-        most_points_bonus = np.zeros_like(points, dtype=float)
-        most_wins_bonus[idx_w] = mw_each
-        most_points_bonus[idx_p] = mp_each
+    most_wins_bonus = np.zeros_like(points, dtype=float)
+    most_points_bonus = np.zeros_like(points, dtype=float)
+    idx_w = np.where(wins == wins.max())[0]
+    idx_p = np.where(points == points.max())[0]
+
+    if rule == "single":
+        most_wins_bonus[rng.choice(idx_w)] = 5.0
+        most_points_bonus[rng.choice(idx_p)] = 10.0
+    elif rule == "split":
+        most_wins_bonus[idx_w] = 5.0 / len(idx_w)
+        most_points_bonus[idx_p] = 10.0 / len(idx_p)
     else:
-        most_wins_bonus = (wins == max_w).astype(float) * 5.0
-        most_points_bonus = (points == max_p).astype(float) * 10.0
+        most_wins_bonus[idx_w] = 5.0
+        most_points_bonus[idx_p] = 10.0
     return most_wins_bonus, most_points_bonus
 
 

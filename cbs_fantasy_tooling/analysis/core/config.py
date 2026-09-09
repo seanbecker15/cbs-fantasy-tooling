@@ -20,8 +20,13 @@ SHARP_BOOKS = ("Pinnacle", "Circa")
 SHARP_WEIGHT = 2  # simple duplication weight; set to 1 to disable
 
 # Bonus rules
-# Tie bonus rules (by default, full bonus to all tied winners)
-BONUS_SPLIT_TIES = False  # if True, split bonuses equally among all tied players
+# How a tie for a weekly bonus is resolved:
+#   "single" - one tied player collects the whole bonus. This is the league rule:
+#              a tie for most points is broken by a Monday-night total guess.
+#              The sim can't model the guess, so it picks a tied player at random.
+#   "all"    - every tied player collects in full (the old, incorrect assumption)
+#   "split"  - the bonus is divided evenly among tied players
+TIE_RULE = os.getenv("TIE_RULE", "single")
 
 # Slate validation settings
 # Expected weekly game count sanity check (regular season typically 16; varies with byes/late-season)
