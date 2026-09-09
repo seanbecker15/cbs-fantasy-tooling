@@ -45,6 +45,23 @@ class DatabasePublisher(Publisher):
                 return False
         return True
 
+    def authenticate(self) -> bool:
+        """Verify the database is actually reachable.
+
+        Checked at publisher-creation time so a paused or deleted project is
+        reported once, instead of failing on every publish during the week.
+        """
+        if not self.db:
+            return False
+        if not self.db.test_connection():
+            print(
+                "Database unreachable. If the Supabase project was paused or deleted, "
+                "either restore it and update SUPABASE_URL/SUPABASE_KEY, or drop "
+                "'database' from ENABLED_PUBLISHERS."
+            )
+            return False
+        return True
+
     def publish_pickem_results(self, results_data: PickemResults) -> bool:
         """
         Publish results to Supabase database.

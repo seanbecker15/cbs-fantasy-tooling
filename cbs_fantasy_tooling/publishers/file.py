@@ -21,6 +21,7 @@ CSV_FILENAMES = {
 
 CHART_FILENAMES = {
     "win_leaderboard": lambda week: f"week_{week}_win_leaderboard.png",
+    "strategy_summary": lambda week: f"week_{week}_strategy_summary.png",
     "user_win_pct": lambda player_slug: f"{player_slug}_win_pct.png",
     "player_style": lambda suffix: f"player_style_{suffix}.png",
     "player_upset": lambda suffix: f"player_upset_{suffix}.png",
@@ -68,10 +69,13 @@ class FilePublisher(Publisher):
     def publish_game_results(self, results_data):
         """Save game results to local files"""
         try:
-            filename = f"week_{results_data.week}_game_results.json"
+            filename = JSON_FILENAMES["game_results"](results_data.week)
             filepath = os.path.join(self.output_dir, filename)
             with open(filepath, "w") as f:
                 json.dump(results_data.to_dict(), f, indent=2)
+
+            print(f"Game results saved to JSON: {filepath}")
+            return True
 
         except Exception as error:
             print(f"File publisher error: {error}")

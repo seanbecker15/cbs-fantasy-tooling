@@ -100,7 +100,8 @@ class GmailPublisher(Publisher):
         msg = MIMEMultipart()
         msg["from"] = self.config["from"]
         msg["to"] = ", ".join(self.config["to"])
-        msg["subject"] = "3GS Results"
+        week = results_data.week_number
+        msg["subject"] = f"3GS Results - Week {week}" if week else "3GS Results"
 
         # Create HTML body
         wins_data = results_data.get_max_wins_data()
@@ -166,7 +167,7 @@ class GmailPublisher(Publisher):
         """Send email via Gmail API"""
         try:
             if not self.service:
-                self._authenticate()
+                self.authenticate()
 
             message = self._create_message(results_data)
             result = self.service.users().messages().send(userId="me", body=message).execute()
