@@ -8,6 +8,8 @@
 
 # Output directories (repo root only - do not match the analysis/data package)
 /data/
+/backup/
+/out/
 
 # Python cache files
 __pycache__/
