@@ -29,9 +29,9 @@ from cbs_fantasy_tooling.analysis.user.analysis import simulate_user_picks, anal
 from cbs_fantasy_tooling.utils.date import (
     get_commence_time_from,
     get_commence_time_to,
-    calc_weeks_since_start,
+    get_current_week,
 )
-from cbs_fantasy_tooling.publishers.file import CSV_FILENAMES
+from cbs_fantasy_tooling.publishers.file import CHART_FILENAMES, CSV_FILENAMES
 from cbs_fantasy_tooling.config import config
 
 
@@ -176,7 +176,10 @@ def display_results(df, user_summary):
         print("(Including your custom picks)")
     print(df.round(4).to_string(index=False))
 
-    # Plot results
+    # Plot results. Saved to a file rather than shown: plt.show() blocks on a GUI
+    # window, which hangs non-interactive and scripted runs.
+    import os
+
     plt.figure(figsize=(8, 4.5))
     plt.bar(df["strategy"], df["expected_total_points"])
     plt.title("Expected Weekly Total (Base + Bonuses) by Strategy")
@@ -184,7 +187,13 @@ def display_results(df, user_summary):
     plt.xlabel("Strategy")
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
-    plt.show()
+
+    os.makedirs(config.output_dir, exist_ok=True)
+    current_week = get_current_week()
+    chart_path = os.path.join(config.output_dir, CHART_FILENAMES["strategy_summary"](current_week))
+    plt.savefig(chart_path, dpi=200, bbox_inches="tight")
+    plt.close()
+    print(f"\nSaved chart: {chart_path}")
 
 
 def save_results(df, week_mapping, game_probs):
@@ -192,7 +201,7 @@ def save_results(df, week_mapping, game_probs):
     import os
 
     # Save strategy summary CSV
-    current_week = calc_weeks_since_start() + 1
+    current_week = get_current_week()
     out_filename = CSV_FILENAMES["strategy_summary"](current_week)
     out_path = os.path.join(config.output_dir, out_filename)
 

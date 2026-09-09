@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 import numpy as np
 from cbs_fantasy_tooling.analysis.core.config import STRATEGY_CODES
-from cbs_fantasy_tooling.utils.date import calc_weeks_since_start
+from cbs_fantasy_tooling.utils.date import get_current_week
 from cbs_fantasy_tooling.publishers.file import JSON_FILENAMES
 from cbs_fantasy_tooling.config import config
 
@@ -34,7 +34,7 @@ def save_predictions(
     os.makedirs(output_dir, exist_ok=True)
 
     # Get current week and timestamp
-    current_week = calc_weeks_since_start() + 1
+    current_week = get_current_week()
     strategy_code = STRATEGY_CODES.get(strategy_name, strategy_name.lower().replace("-", ""))
 
     filename = JSON_FILENAMES["predictions"](current_week, strategy_code)

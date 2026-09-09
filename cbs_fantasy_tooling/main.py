@@ -19,7 +19,7 @@ from cbs_fantasy_tooling.ingest.cbs_sports import PickemIngestParams, ingest_pic
 from cbs_fantasy_tooling.ingest.espn.api import GameOutcomeIngestParams, ingest_game_outcomes
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.factory import create_publishers
-from cbs_fantasy_tooling.utils.date import calc_weeks_since_start
+from cbs_fantasy_tooling.utils.date import get_current_week, get_last_completed_week
 
 
 class MenuOption(str, Enum):
@@ -135,12 +135,12 @@ def ingest_flow(publishers: List[Publisher]):
     if DataType.PICKEM_RESULTS in data_types:
         target_week = inquirer.text(
             message="Target week number",
-            default=str(calc_weeks_since_start()),
+            default=str(get_last_completed_week()),
         ).execute()
-        
+
         current_week = inquirer.text(
             message="Current week (for scraper dropdown)",
-            default=str(calc_weeks_since_start() + 1),
+            default=str(get_current_week()),
         ).execute()
 
         scrape_all_weeks = False
@@ -170,7 +170,7 @@ def ingest_flow(publishers: List[Publisher]):
     if DataType.GAME_OUTCOMES in data_types:
         weeks_input = inquirer.text(
             message="Week(s) to ingest game outcomes (comma-separated allowed)",
-            default=str(calc_weeks_since_start()),
+            default=str(get_last_completed_week()),
         ).execute()
         week_list = _parse_weeks_input(weeks_input)
         if not week_list:
@@ -268,7 +268,7 @@ def analysis_flow():
     if AnalysisType.VISUALIZE_CONTRARIAN_PICKS in analysis_types:
         target_week_input = inquirer.text(
             message="Visualize contrarian picks for week number",
-            default=str(calc_weeks_since_start()),
+            default=str(get_last_completed_week()),
         ).execute()
 
         target_week = int(target_week_input)
@@ -283,7 +283,7 @@ def analysis_flow():
     if AnalysisType.WIN_SCENARIO in analysis_types:
         target_week_input = inquirer.text(
             message="Analyze win scenarios for week number",
-            default=str(calc_weeks_since_start()),
+            default=str(get_last_completed_week()),
         ).execute()
 
         player_name_input = inquirer.text(
@@ -309,7 +309,7 @@ def analysis_flow():
     if AnalysisType.WIN_LEADERBOARD in analysis_types:
         target_week_input = inquirer.text(
             message="Analyze win leaderboard for week number",
-            default=str(calc_weeks_since_start()),
+            default=str(get_last_completed_week()),
         ).execute()
 
         target_week = int(target_week_input)
