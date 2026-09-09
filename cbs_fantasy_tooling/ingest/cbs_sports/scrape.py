@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from time import sleep
+from urllib.parse import quote
 
 from cbs_fantasy_tooling.models import PickemResult, PickemResults
 from cbs_fantasy_tooling.publishers import Publisher
@@ -17,11 +18,33 @@ from cbs_fantasy_tooling.publishers.database import DatabasePublisher
 from cbs_fantasy_tooling.storage.providers.database import compare_results
 from cbs_fantasy_tooling.config import config
 
-login_page_url = "https://www.cbssports.com/login?masterProductId=41010&product_abbrev=opm&show_opts=1&xurl=https%3A%2F%2Fpicks.cbssports.com%2Ffootball%2Fpickem%2Fpools%2Fizxw65dcmfwgyudjmnvwk3knmfxgcz3fojig633mhiytgobtgq2deoi%253D%2Fstandings%2Fweekly%3Fdevice%3Ddesktop%26device%3Ddesktop"
+STANDINGS_URL_TEMPLATE = (
+    "https://picks.cbssports.com/football/pickem/pools/{slug}/standings/weekly?device=desktop"
+)
+LOGIN_URL_TEMPLATE = (
+    "https://www.cbssports.com/login"
+    "?masterProductId=41010&product_abbrev=opm&show_opts=1&xurl={xurl}"
+)
+
+
+def build_login_url(pool_slug: str | None = None) -> str:
+    """Build the CBS login URL that redirects to this pool's weekly standings.
+
+    The pool slug is the base32 segment of the pool URL and changes every season,
+    so it is read from CBS_POOL_SLUG rather than hardcoded.
+    """
+    slug = pool_slug or config.cbs_pool_slug
+    if not slug:
+        raise ValueError(
+            "CBS_POOL_SLUG is not set. Copy the slug from your pool URL "
+            "(https://picks.cbssports.com/football/pickem/pools/<slug>/...) into .env"
+        )
+    standings_url = STANDINGS_URL_TEMPLATE.format(slug=slug)
+    return LOGIN_URL_TEMPLATE.format(xurl=quote(standings_url, safe=""))
 
 
 def navigate_login(driver, max_wait_time, email: str, password: str) -> int:
-    driver.get(login_page_url)
+    driver.get(build_login_url())
     if email is None or len(email) == 0:
         print("Email not found. Make sure .env file is configured correctly.")
         return 1
@@ -204,7 +227,9 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
             if not scraped:
                 raise Exception("No results scraped for any week.")
             for week_num, pickem_result_items in scraped:
-                print(f"\nPublishing results for Week {week_num}... ({len(pickem_result_items)} rows)")
+                print(
+                    f"\nPublishing results for Week {week_num}... ({len(pickem_result_items)} rows)"
+                )
                 pickem_results = PickemResults(pickem_result_items, week_num)
                 publish_results(pickem_results, publishers)
         else:
@@ -242,9 +267,7 @@ def run_scraper(
     # helper to jump between weeks via dropdown
     def goto_week(curr_week: int, desired_week: int) -> bool:
         try:
-            print(
-                f"Looking for dropdown with text 'Week {curr_week}' → 'Week {desired_week}'"
-            )
+            print(f"Looking for dropdown with text 'Week {curr_week}' → 'Week {desired_week}'")
             navigate_standings(driver, max_wait_time, curr_week, desired_week)
             sleep(2)
             print(f"✓ Navigated to Week {desired_week}")

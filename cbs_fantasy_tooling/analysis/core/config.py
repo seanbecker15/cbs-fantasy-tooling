@@ -1,5 +1,7 @@
 """Configuration constants and settings for the simulator."""
 
+import os
+
 from dotenv import load_dotenv
 
 from cbs_fantasy_tooling.config import config
@@ -7,7 +9,8 @@ from cbs_fantasy_tooling.config import config
 load_dotenv()
 
 # League settings
-LEAGUE_SIZE = 32
+# Roster size changes between seasons, so allow it to be overridden via env.
+LEAGUE_SIZE = int(os.getenv("LEAGUE_SIZE", "32"))
 N_OTHERS = LEAGUE_SIZE - 1
 N_SIMS = 20000  # reduce (e.g., 5000) if runs are slow on your machine
 

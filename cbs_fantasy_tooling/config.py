@@ -26,11 +26,20 @@ class Config:
         self.output_dir = os.getenv("OUTPUT_DIR", "data")
         self.backup_dir = os.getenv("BACKUP_DIR", None)
 
+        # Historical data used to model the field (prior seasons). Output files are
+        # not season-scoped by name, so a new season's ingest would otherwise
+        # overwrite the history the competitor model is built from.
+        self.history_dir = os.getenv("HISTORY_DIR") or self.output_dir
+
         # Publisher configuration - which publishers to use
         self.enabled_publishers = self._parse_enabled_publishers()
 
         # Week configuration
-        self.week_one_start_date = os.getenv("WEEK_ONE_START_DATE", "2025-09-02")
+        self.week_one_start_date = os.getenv("WEEK_ONE_START_DATE", "2026-09-08")
+
+        # CBS pool configuration - base32 slug from the pool URL
+        # e.g. https://picks.cbssports.com/football/pickem/pools/<slug>/standings/weekly
+        self.cbs_pool_slug = os.getenv("CBS_POOL_SLUG")
 
         # User configuration
         self.user_name = os.getenv("USER_NAME")
