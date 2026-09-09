@@ -3,9 +3,8 @@
 import random
 import numpy as np
 from cbs_fantasy_tooling.analysis.user.picks import parse_user_picks, create_user_strategy
-from cbs_fantasy_tooling.analysis.core.config import N_SIMS, N_OTHERS
-from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
-from cbs_fantasy_tooling.analysis.core.simulator import simulate_week_once
+from cbs_fantasy_tooling.analysis.core.config import N_SIMS
+from cbs_fantasy_tooling.analysis.core.simulator import build_field, simulate_week_once
 
 
 def simulate_user_picks(
@@ -37,10 +36,7 @@ def simulate_user_picks(
     user_strategy = create_user_strategy(picks, confidence)
 
     # Run simulation using same framework as built-in strategies
-    others = []
-    for name, count in others_mix.items():
-        others.extend([STRATEGIES[name]] * count)
-    assert len(others) == N_OTHERS
+    others = build_field(others_mix)
 
     user_totals = []
     user_points = []

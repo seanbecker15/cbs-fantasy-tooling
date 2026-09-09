@@ -44,7 +44,7 @@ def load_game_results(data_dir: str = "out") -> pd.DataFrame:
             losing_team = game.get("losing_team") or game.get("loser")
             all_games.append(
                 {
-                    "week": game["week"],
+                    "week": game.get("week_number", data.get("week")),
                     "away_team": game["away_team"],
                     "home_team": game["home_team"],
                     "away_score": game["away_score"],

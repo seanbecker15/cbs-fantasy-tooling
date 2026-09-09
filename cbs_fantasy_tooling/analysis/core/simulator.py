@@ -6,6 +6,32 @@ from cbs_fantasy_tooling.analysis.core.config import BONUS_SPLIT_TIES, N_OTHERS
 from cbs_fantasy_tooling.analysis.core.strategies import STRATEGIES
 
 
+def build_field(others_mix, n_others=N_OTHERS):
+    """Expand a strategy mix into a list of opponent strategy functions.
+
+    The mix is derived from historical data, so its total can drift from the
+    configured league size (players join or leave between seasons). Rather than
+    crashing mid-simulation, reconcile to `n_others` and warn.
+    """
+    others = []
+    for name, count in others_mix.items():
+        others.extend([STRATEGIES[name]] * count)
+
+    if not others:
+        raise ValueError("Field composition is empty; cannot simulate against no opponents.")
+
+    if len(others) != n_others:
+        print(
+            f"Warning: field composition has {len(others)} opponents but LEAGUE_SIZE implies "
+            f"{n_others}. Adjusting to {n_others} (set LEAGUE_SIZE in .env to silence this)."
+        )
+        while len(others) < n_others:
+            others.append(others[len(others) % len(others)])
+        others = others[:n_others]
+
+    return others
+
+
 def _apply_bonuses(wins, points):
     """
     Calculate bonus points for most wins and most points.
@@ -80,10 +106,7 @@ def simulate_many_weeks(p, your_strategy_name, others_mix, n_sims=5000):
         Dictionary with performance statistics
     """
     your_strategy = STRATEGIES[your_strategy_name]
-    others = []
-    for name, count in others_mix.items():
-        others.extend([STRATEGIES[name]] * count)
-    assert len(others) == N_OTHERS
+    others = build_field(others_mix)
 
     your_totals = []
     your_points = []

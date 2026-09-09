@@ -11,7 +11,9 @@ Usage:
     # Returns: {"Chalk-MaxPoints": 17, "Slight-Contrarian": 14, "Aggressive-Contrarian": 1}
 """
 
-from typing import Dict
+from typing import Dict, Optional
+
+from cbs_fantasy_tooling.config import config
 from cbs_fantasy_tooling.analysis.data.loader import load_competitor_data
 from cbs_fantasy_tooling.analysis.data.enrichment import full_enrichment_pipeline
 from cbs_fantasy_tooling.analysis.competitor.competitor_classifier import (
@@ -21,7 +23,7 @@ from cbs_fantasy_tooling.analysis.competitor.competitor_classifier import (
 
 
 def get_actual_field_composition(
-    data_dir: str = "../out", exclude_user: str = None
+    data_dir: Optional[str] = None, exclude_user: str = None
 ) -> Dict[str, int]:
     """
     Get actual league field composition from historical data.
@@ -34,7 +36,9 @@ def get_actual_field_composition(
         Dictionary of strategy counts compatible with main.py STRATEGY_MIX format
         Example: {"Chalk-MaxPoints": 17, "Slight-Contrarian": 14, "Aggressive-Contrarian": 1}
     """
-    # Load and analyze competitor data
+    # Load and analyze competitor data. Defaults to the historical corpus: the
+    # field model needs completed seasons, not the in-progress one.
+    data_dir = data_dir or config.history_dir
     picks_df, _, _ = load_competitor_data(data_dir)
     enriched_picks, _ = full_enrichment_pipeline(picks_df, data_dir)
 
@@ -56,7 +60,7 @@ def get_actual_field_composition(
     }
 
 
-def get_field_statistics(data_dir: str = "out") -> Dict:
+def get_field_statistics(data_dir: Optional[str] = None) -> Dict:
     """
     Get comprehensive field statistics for analysis.
 
@@ -69,6 +73,7 @@ def get_field_statistics(data_dir: str = "out") -> Dict:
         - avg_points_per_week: float
         - top_performers: list
     """
+    data_dir = data_dir or config.history_dir
     picks_df, _, _ = load_competitor_data(data_dir)
     enriched_picks, _ = full_enrichment_pipeline(picks_df, data_dir)
     profiles = build_player_profiles(enriched_picks)
