@@ -15,9 +15,9 @@ from cbs_fantasy_tooling.publishers.gmail import GmailPublisher
 
 def _results():
     rows = []
-    for name, pts, w, l in [("A", "100", 12, 4), ("B", "90", 10, 6)]:
+    for name, pts, wins, losses in [("A", "100", 12, 4), ("B", "90", 10, 6)]:
         r = PickemResult()
-        r.name, r.results, r.picks = name, [pts, w, l], []
+        r.name, r.results, r.picks = name, [pts, wins, losses], []
         rows.append(r)
     return PickemResults(rows, week=1)
 
