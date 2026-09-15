@@ -32,6 +32,11 @@ To grow this file:
 - Use the interactive CLI (`cbs-scrape`) as the entry point, not direct Python module calls.
 - Test changes by running CLI in "Once" mode with manual week selection before committing.
 - Verify data output in `OUTPUT_DIR` (default `./data/`) after ingestion or analysis.
+- Run the CI checks **before every push, not before every commit**: `task check` (format, lint, test).
+  Commits are cheap and may be incremental; the push is the gate. CI runs exactly these three checks
+  on Python 3.11, so a push that skipped them is a red build.
+  - Gate on real exit codes. `ruff check . | tail -1 && git push` masks a failing lint - `tail` exits 0.
+    Use `set -o pipefail`, or run each check unpiped.
 
 ## Tech Stack & Tools
 
@@ -153,5 +158,5 @@ If you find yourself repeating multi-step CLI workflows, consider adding wrapper
 
 ---
 
-**Last Updated**: 2025-12-11
+**Last Updated**: 2026-09-15
 **For questions**: Check git history or ask the human (me).
