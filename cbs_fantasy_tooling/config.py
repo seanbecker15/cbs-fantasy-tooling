@@ -35,6 +35,7 @@ class Config:
         )
         self.gmail_token_file = _anchor(os.getenv("GMAIL_TOKEN_FILE", "token.json"))
         self.gmail_from = os.getenv("GMAIL_FROM")
+        self.gmail_from_name = os.getenv("GMAIL_FROM_NAME", "3GS Pick'em")
 
         # SendGrid configuration (legacy)
         self.sendgrid_api_key = os.getenv("SENDGRID_API_KEY")
@@ -106,6 +107,7 @@ class Config:
                 "credentials_file": self.gmail_credentials_file,
                 "token_file": self.gmail_token_file,
                 "from": self.gmail_from,
+                "from_name": self.gmail_from_name,
                 "to": self.notification_to,
             },
             "sendgrid": {

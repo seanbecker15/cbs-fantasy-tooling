@@ -4,6 +4,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from typing import Any
 
 from google.auth.transport.requests import Request
@@ -98,11 +99,15 @@ class GmailPublisher(Publisher):
 
     def _create_message(self, results_data: PickemResults) -> str:
         """Create email message with CSV attachment"""
+        # Canonical header names and a display name. Gmail flagged the bare,
+        # lowercase form as "sender can't be verified".
         msg = MIMEMultipart()
-        msg["from"] = self.config["from"]
-        msg["to"] = ", ".join(self.config["to"])
+        msg["From"] = formataddr(
+            (self.config.get("from_name") or "3GS Pick'em", self.config["from"])
+        )
+        msg["To"] = ", ".join(self.config["to"])
         week = results_data.week_number
-        msg["subject"] = f"3GS Results - Week {week}" if week else "3GS Results"
+        msg["Subject"] = f"3GS Results - Week {week}" if week else "3GS Results"
 
         # Create HTML body
         wins_data = results_data.get_max_wins_data()
