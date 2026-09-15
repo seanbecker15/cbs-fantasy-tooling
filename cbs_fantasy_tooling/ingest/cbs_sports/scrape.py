@@ -213,7 +213,12 @@ class PickemIngestParams:
     poll_interval: int | None = None
 
 
-def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher]):
+def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher]) -> bool:
+    """Scrape and publish. Returns False on any failure so callers can exit non-zero.
+
+    The scheduled job runs unattended; a swallowed exception here used to
+    exit 0 and look like a successful week.
+    """
     try:
         print(
             f"[ingest_pickem_results] curr_week={params.curr_week}, "
@@ -234,14 +239,15 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
         else:
             if not scraped:
                 print("[ingest_pickem_results] No results scraped.")
-                print("No results scraped.")
-                return
+                return False
             week_num, pickem_result_items = scraped[0]
             print(f"\nPublishing results for Week {week_num}... ({len(pickem_result_items)} rows)")
             pickem_results = PickemResults(pickem_result_items, week_num)
             publish_results(pickem_results, publishers)
+        return True
     except Exception as e:
         print(f"Error occurred during scraping or publishing: {e}")
+        return False
 
 
 def run_scraper(
@@ -254,14 +260,7 @@ def run_scraper(
     chrome_options = Options()
 
     driver = webdriver.Chrome(options=chrome_options)
-
-    navigate_login(driver, max_wait_time, email, password)
-    wait_for_user_input(30)
-
     succeeded = False
-
-    # Sometimes on first load the page doesn't finish loading
-    driver.refresh()
 
     # helper to jump between weeks via dropdown
     def goto_week(curr_week: int, desired_week: int) -> bool:
@@ -276,6 +275,12 @@ def run_scraper(
             return False
 
     try:
+        navigate_login(driver, max_wait_time, email, password)
+        wait_for_user_input(30)
+
+        # Sometimes on first load the page doesn't finish loading
+        driver.refresh()
+
         if params.scrape_all_weeks:
             all_results: list[tuple[int, list[PickemResult]]] = []
             current_display_week = params.curr_week
@@ -479,29 +484,53 @@ def publish_results(results: PickemResults, publishers: list[Publisher]):
         print(f"Failed publishers: {', '.join(errors)}")
 
 
+def _interactive_stdin() -> bool:
+    """True only when a real terminal is attached. Under launchd stdin is /dev/null."""
+    stdin = sys.stdin
+    try:
+        return bool(stdin) and stdin.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
 def wait_for_exit_signal(_timeout_seconds: int | None = None) -> bool:
     """
-    Wait for user input with a timeout. Non-blocking check for exit signal.
+    Non-blocking check for a keypress. Never fires in a non-interactive session:
+    /dev/null reads as "readable" (EOF) and would otherwise stop polling instantly.
 
     Returns:
-        True if user pressed a key, False if timeout
+        True if the user pressed a key, False otherwise
     """
-    # Check if stdin has data available (non-blocking)
+    if not _interactive_stdin():
+        return False
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-        # Consume any input
-        sys.stdin.readline()
+        try:
+            sys.stdin.readline()
+        except EOFError:
+            return False
         return True
     return False
 
 
-def wait_for_user_input(timeout_seconds=30):
-    """Wait for user input with a timeout. Returns True if user pressed Enter, False if timeout."""
-    print(f"Press Enter to continue (will auto-continue in {timeout_seconds} seconds)...")
+def wait_for_user_input(timeout_seconds=30) -> bool:
+    """
+    Give a human a window to intervene in the browser (e.g. a login challenge).
 
-    # Use select to check if input is available
-    if sys.stdin in select.select([sys.stdin], [], [], timeout_seconds)[0]:
-        input()  # Consume the input
-        return True
-    else:
-        print(f"\nTimeout reached after {timeout_seconds} seconds, continuing automatically...")
+    Interactive: return True as soon as Enter is pressed, False on timeout.
+    Non-interactive: there is nobody to press Enter, so keep the delay as
+    settling time for the login page and return False.
+    """
+    if not _interactive_stdin():
+        print(f"No terminal attached; continuing automatically in {timeout_seconds} seconds...")
+        sleep(timeout_seconds)
         return False
+
+    print(f"Press Enter to continue (will auto-continue in {timeout_seconds} seconds)...")
+    if sys.stdin in select.select([sys.stdin], [], [], timeout_seconds)[0]:
+        try:
+            input()
+        except EOFError:
+            return False
+        return True
+    print(f"\nTimeout reached after {timeout_seconds} seconds, continuing automatically...")
+    return False
