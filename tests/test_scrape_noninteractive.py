@@ -87,6 +87,7 @@ def test_entrypoint_exit_code_reflects_outcome(monkeypatch, ok, code):
 
     monkeypatch.setattr(entry, "create_publishers", lambda: [])
     monkeypatch.setattr(entry, "ingest_pickem_results", lambda p, pubs: ok)
+    monkeypatch.setattr(entry, "sleep", lambda s: None)  # retries must not really wait
     with pytest.raises(SystemExit) as e:
         entry.main()
     assert e.value.code == code
