@@ -45,8 +45,16 @@ function download(filename, mime, text) {
   chrome.downloads.download({ url, filename, saveAs: false });
 }
 
-async function inject(func, args = []) {
-  const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func, args });
+const SCRAPE_TIMEOUT_MS = 45000;
+
+async function inject(func, args = [], timeoutMs = SCRAPE_TIMEOUT_MS) {
+  // A page call that never settles must surface as an error, not a stuck spinner.
+  const run = chrome.scripting.executeScript({ target: { tabId: tab.id }, func, args });
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("timeout")), timeoutMs)
+  );
+  const [res] = await Promise.race([run, timeout]);
+  if (!res) throw new Error("no-result");
   return res.result;
 }
 
@@ -107,12 +115,15 @@ async function scrape() {
     lastData = data;
     render(data, me);
   } catch (e) {
-    const msg = String(e && e.message || e);
+    const msg = String((e && e.message) || e);
+    console.error("scrape failed:", e);
     $("errorText").textContent =
       msg.includes("week-not-listed") ? `Week ${target} isn't in the standings dropdown yet.`
       : msg.includes("table-missing") ? "Couldn't find the standings table. Open the Weekly tab on the standings page and try again."
       : msg.includes("empty") ? "The table loaded with no players. Give the page a second and try again."
+      : msg.includes("timeout") ? "The page didn't respond in time. Reload it and try again."
       : "Something went wrong reading the page. Reload it and try again.";
+    $("errorDetail").textContent = msg;
     show("error");
   }
 }

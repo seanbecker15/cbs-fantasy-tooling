@@ -66,3 +66,9 @@ def test_working_message_is_based_on_the_page_at_scrape_time():
     scrape_fn = js.split("async function scrape()")[1].split("async function init")[0]
     assert "await inject(readPage)" in scrape_fn
     assert "page.shown !== target" in scrape_fn
+
+
+def test_page_calls_cannot_hang_the_popup():
+    js = (EXT / "popup.js").read_text()
+    assert "Promise.race" in js and 'new Error("timeout")' in js
+    assert 'id="errorDetail"' in (EXT / "popup.html").read_text()
