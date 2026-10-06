@@ -55,8 +55,8 @@ function setTarget(n) {
   $("targetWeek").value = n;
   $("scrape").textContent = `Scrape week ${n}`;
   $("targetHint").textContent =
-    shownWeek && n === shownWeek - 1 ? "Last finished week. Change it if you need another."
-    : shownWeek && n === shownWeek ? "This week is still in progress; picks may be locked or blank."
+    shownWeek && n === shownWeek ? "The week the page is showing. Use − and + for another."
+    : shownWeek && n > shownWeek ? "A later week than the page is showing; it may not be posted yet."
     : "";
 }
 
@@ -141,7 +141,8 @@ async function init() {
   shownWeek = page.shown;
   $("weekNum").textContent = shownWeek ?? "–";
   $("weekSub").textContent = "Showing on the page now";
-  setTarget((shownWeek || 2) - 1);
+  // Default to the week the page is on: the dropdown is already the user's choice.
+  setTarget(shownWeek || 1);
   show("ready");
   status("Ready");
 }

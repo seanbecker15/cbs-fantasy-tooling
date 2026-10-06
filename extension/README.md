@@ -21,8 +21,8 @@ That's it. Chrome keeps it installed; you don't need to repeat this.
 
 1. Open the pool's **Standings → Weekly** page on picks.cbssports.com.
    (If you open the extension anywhere else, it offers to take you there.)
-2. Click the extension icon. It shows the week the page is on and defaults to
-   scraping the **last finished week** — usually what you want.
+2. Click the extension icon. It defaults to **the week the page is showing** —
+   pick a different week on the page or with the − / + buttons.
 3. Click **Scrape week N**. It switches the page to that week, reads every
    player's row, and shows the standings with the two bonus winners.
 4. Click **Save JSON**. The file lands in your Downloads folder as

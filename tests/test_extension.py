@@ -49,3 +49,10 @@ def test_export_filename_matches_pipeline():
     js = (EXT / "popup.js").read_text()
     assert "week_${lastData.week}_pickem_results.json" in js
     assert "week_${lastData.week}_pickem_results.csv" in js
+
+
+def test_popup_defaults_to_the_week_shown_on_the_page():
+    """The dropdown on the page is already the user's choice; don't second-guess it."""
+    js = (EXT / "popup.js").read_text()
+    assert "setTarget(shownWeek || 1)" in js
+    assert "shownWeek - 1" not in js.split("function setTarget")[0].split("async function init")[-1]
