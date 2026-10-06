@@ -51,7 +51,7 @@ body {
 .hero__num { font: 700 64px/0.9 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .hero__sub { margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.78); }
 
-.main { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.main { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 20px; }
 .panel { display: flex; flex-direction: column; gap: 14px; }
 .panel__lead { margin: 0; font-size: 14px; }
 .panel__hint { margin: 0; font-size: 12px; color: var(--muted); }
@@ -93,16 +93,20 @@ body {
 @keyframes pulse { 0%,100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
 
-.bonus { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.bonus__card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-.bonus__label { font: 600 10px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+/* Two equal columns that can never grow past the popup: grid items default
+   to min-width:auto, which lets long content (a three-way tie) widen the
+   whole page. min-width:0 + wrapping text keeps everything inside. */
+.bonus { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 12px; }
+.bonus__card { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.bonus__label { display: flex; justify-content: space-between; align-items: center; gap: 6px; font: 600 10px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.bonus__tag { flex: none; padding: 2px 6px; border-radius: 999px; background: var(--marigold-tint); color: var(--marigold-ink); letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .bonus__value { margin-top: 6px; font: 700 28px/1 var(--display); font-variant-numeric: tabular-nums; }
-.bonus__who { margin-top: 4px; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bonus__who { margin-top: 4px; font-size: 12px; line-height: 1.3; color: var(--text); overflow-wrap: anywhere; }
 
 .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .standings { width: 100%; border-collapse: collapse; font-size: 13px; }
 .standings th { text-align: left; font: 600 10px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
-.standings td { padding: 6px 10px; border-bottom: 1px solid #eef1f4; font-variant-numeric: tabular-nums; }
+.standings td { padding: 6px 10px; border-bottom: 1px solid #eef1f4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .standings tr:last-child td { border-bottom: 0; }
 .standings .num { text-align: right; }
 .standings tr.me td { background: var(--marigold-tint); font-weight: 600; }

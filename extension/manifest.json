@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "3G's Pool Standings",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Scrape a week of CBS Pick'em standings for the 3 G's pool and save it for the analysis pipeline.",
   "action": {
     "default_popup": "popup.html",

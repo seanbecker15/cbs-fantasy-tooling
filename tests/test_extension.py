@@ -90,3 +90,14 @@ def test_hidden_attribute_wins_over_panel_display():
     html = (EXT / "popup.html").read_text()
     for view in ("offsite", "ready", "working", "results", "error"):
         assert f'id="{view}" hidden' in html, view
+
+
+def test_popup_cannot_scroll_horizontally():
+    """A three-way bonus tie once widened the whole popup."""
+    css = (EXT / "popup.css").read_text()
+    assert "overflow-x: hidden" in css.split(".main {")[1].split("}")[0]
+    bonus = css.split(".bonus__card {")[1].split("}")[0]
+    assert "min-width: 0" in bonus
+    who = css.split(".bonus__who {")[1].split("}")[0]
+    assert "nowrap" not in who and "overflow-wrap: anywhere" in who
+    assert "minmax(0, 1fr)" in css
