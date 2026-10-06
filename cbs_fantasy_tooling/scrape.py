@@ -1,8 +1,11 @@
 import sys
 from time import sleep
 
+from cbs_fantasy_tooling.config import config
+from cbs_fantasy_tooling.ingest.cbs_sports import scrape as cbs
 from cbs_fantasy_tooling.ingest.cbs_sports.scrape import PickemIngestParams, ingest_pickem_results
 from cbs_fantasy_tooling.publishers.factory import create_publishers
+from cbs_fantasy_tooling.publishers.gmail import GmailPublisher
 from cbs_fantasy_tooling.utils.date import get_last_completed_week
 
 # The scrape fails transiently now and then (a dropdown that has not rendered
@@ -10,6 +13,14 @@ from cbs_fantasy_tooling.utils.date import get_last_completed_week
 # noticed. Space a few retries out so a flake at 9:30 lands by 10:30.
 ATTEMPTS = 4
 RETRY_DELAY_SECONDS = 15 * 60
+
+
+def create_failure_alerter():
+    """A Gmail publisher for the ops alert, or None if Gmail is not configured."""
+    if not config.is_publisher_enabled("gmail"):
+        return None
+    pub = GmailPublisher(config.get_publisher_config("gmail"))
+    return pub if pub.validate_config() else None
 
 
 def main(attempts: int = ATTEMPTS, delay_seconds: int = RETRY_DELAY_SECONDS) -> None:
@@ -26,8 +37,14 @@ def main(attempts: int = ATTEMPTS, delay_seconds: int = RETRY_DELAY_SECONDS) -> 
             print(f"[scrape] attempt {attempt} failed; retrying in {delay_seconds}s")
             sleep(delay_seconds)
 
-    # launchd only sees the exit code; a failed week must not look like success.
     print(f"[scrape] all {attempts} attempts failed for week {target_week}")
+    alerter = create_failure_alerter()
+    if alerter is not None:
+        # Best effort. The exit code below is the source of truth, not this email.
+        alerter.send_failure_alert(
+            week=target_week, attempts=attempts, last_error=cbs.last_error or "unknown"
+        )
+    # launchd only sees the exit code; a failed week must not look like success.
     sys.exit(1)
 
 

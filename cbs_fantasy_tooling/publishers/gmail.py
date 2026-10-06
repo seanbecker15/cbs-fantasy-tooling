@@ -169,6 +169,38 @@ class GmailPublisher(Publisher):
         </html>
         """
 
+    def send_failure_alert(self, week: int, attempts: int, last_error: str) -> bool:
+        """Email the sender that the scheduled scrape gave up.
+
+        Ops-only, so it goes to the From address rather than the league list.
+        Never raises: the caller is already on its failure path and must keep
+        its own exit code regardless of whether this message gets out.
+        """
+        try:
+            if not self.service:
+                self.authenticate()
+            msg = MIMEMultipart()
+            msg["From"] = formataddr(
+                (self.config.get("from_name") or "3GS Pick'em", self.config["from"])
+            )
+            msg["To"] = self.config["from"]
+            msg["Subject"] = f"3GS scrape FAILED - Week {week}"
+            body = (
+                f"The scheduled pick'em scrape for Week {week} failed after {attempts} attempts.\n\n"
+                f"Last error:\n{last_error}\n\n"
+                "Nothing was published. Run the scrape manually once the cause is fixed:\n"
+                "  cd ~/Code/cbs-fantasy-tooling && .venv/bin/python -m cbs_fantasy_tooling.scrape\n\n"
+                "Logs: /tmp/cbs-sports-scraper/\n"
+            )
+            msg.attach(MIMEText(body, "plain"))
+            raw = {"raw": base64.urlsafe_b64encode(msg.as_bytes()).decode()}
+            self.service.users().messages().send(userId="me", body=raw).execute()
+            print(f"Failure alert sent to {self.config['from']}")
+            return True
+        except Exception as error:
+            print(f"Could not send failure alert: {error}")
+            return False
+
     def publish_pickem_results(self, results_data: PickemResults) -> bool:
         """Send email via Gmail API"""
         try:

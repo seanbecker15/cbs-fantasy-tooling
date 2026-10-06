@@ -1,3 +1,4 @@
+import os
 import select
 import sys
 from dataclasses import dataclass
@@ -42,6 +43,50 @@ def build_login_url(pool_slug: str | None = None) -> str:
         )
     standings_url = STANDINGS_URL_TEMPLATE.format(slug=slug)
     return LOGIN_URL_TEMPLATE.format(xurl=quote(standings_url, safe=""))
+
+
+def capture_page_state(driver, out_dir, label: str) -> dict:
+    """Record where the browser is, for post-mortem of an unattended failure.
+
+    Never raises: this runs on the failure path and must not replace the
+    real error with its own.
+    """
+    info = {"url": None, "title": None, "excerpt": "", "screenshot": None}
+    try:
+        info["url"] = driver.current_url
+        info["title"] = driver.title
+    except Exception:
+        return info
+    try:
+        info["excerpt"] = driver.find_element(By.TAG_NAME, "body").text[:600]
+    except Exception:
+        pass
+    try:
+        os.makedirs(out_dir, exist_ok=True)
+        path = os.path.join(out_dir, f"scrape-failure-{label}.png")
+        if driver.save_screenshot(path):
+            info["screenshot"] = path
+    except Exception:
+        pass
+    return info
+
+
+def describe_page_state(info: dict) -> str:
+    """One-paragraph diagnosis of a captured page state."""
+    url = info.get("url") or "(unknown)"
+    where = "an unknown page"
+    if "/login" in url or "Sign In" in (info.get("title") or ""):
+        where = "the LOGIN page (credentials rejected, or a sign-in challenge)"
+    elif "/standings" in url:
+        where = "the standings page (week dropdown never rendered or changed shape)"
+    elif "picks.cbssports.com" in url:
+        where = "the pool site but not standings (redirect?)"
+    lines = [f"Browser was on {where}.", f"  url: {url}", f"  title: {info.get('title')}"]
+    if info.get("screenshot"):
+        lines.append(f"  screenshot: {info['screenshot']}")
+    if info.get("excerpt"):
+        lines.append("  page text: " + info["excerpt"][:200].replace("\n", " | "))
+    return "\n".join(lines)
 
 
 def navigate_login(driver, max_wait_time, email: str, password: str) -> int:
@@ -205,6 +250,13 @@ def print_most_points(results):
     print(f"Players with the most points: {', '.join(players_with_max_points)}")
 
 
+# Most recent failure reason from ingest_pickem_results, for the failure alert.
+last_error: str = ""
+
+# Where failure screenshots go. Same place as the launchd logs.
+FAILURE_DIR = os.getenv("SCRAPE_FAILURE_DIR", "/tmp/cbs-sports-scraper")
+
+
 @dataclass
 class PickemIngestParams:
     curr_week: int
@@ -219,6 +271,7 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
     The scheduled job runs unattended; a swallowed exception here used to
     exit 0 and look like a successful week.
     """
+    global last_error
     try:
         print(
             f"[ingest_pickem_results] curr_week={params.curr_week}, "
@@ -239,6 +292,7 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
         else:
             if not scraped:
                 print("[ingest_pickem_results] No results scraped.")
+                last_error = "No results scraped (see log for the navigation or parse error)"
                 return False
             week_num, pickem_result_items = scraped[0]
             print(f"\nPublishing results for Week {week_num}... ({len(pickem_result_items)} rows)")
@@ -247,6 +301,7 @@ def ingest_pickem_results(params: PickemIngestParams, publishers: list[Publisher
         return True
     except Exception as e:
         print(f"Error occurred during scraping or publishing: {e}")
+        last_error = str(e)
         return False
 
 
@@ -319,8 +374,14 @@ def run_scraper(
             week_iterator -= 1
 
         if not succeeded:
+            state = capture_page_state(
+                driver, FAILURE_DIR, label=f"week{params.target_week}-{datetime.now():%H%M%S}"
+            )
+            diagnosis = describe_page_state(state)
+            print(diagnosis)
             raise Exception(
-                f"Could not find week dropdown. Searched {params.curr_week}..{params.target_week}."
+                f"Could not find week dropdown. Searched {params.curr_week}..{params.target_week}.\n"
+                + diagnosis
             )
 
         sleep(5)
