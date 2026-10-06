@@ -109,11 +109,16 @@ All results saved to `OUTPUT_DIR` (e.g. `data/2026/`):
 | "Could not find week dropdown" | `CBS_POOL_SLUG` is stale - grab this season's slug |
 | Database publisher fails | Supabase project paused/deleted; fix creds or drop `database` from `ENABLED_PUBLISHERS` |
 
-## Scheduling (macOS)
+## Scheduling (macOS) — currently disabled
+
+The Tuesday 9:30 launchd job drove the Selenium scraper. CBS put reCAPTCHA on
+its login in October 2026 and the scripted login is blocked, so the job is
+unscheduled and the **Chrome extension** (`extension/README.md`) is the weekly
+path: scrape in the browser, then `cbs-publish`.
 
 ```bash
-./scripts/schedule-task.sh    # Tuesdays 9 AM
-./scripts/unschedule-task.sh  # Remove
+./scripts/unschedule-task.sh  # stop the job and keep it stopped across logins
+./scripts/schedule-task.sh    # re-enable (only if the scraper can log in again)
 ```
 
-Logs: `/tmp/cbs-sports-scraper/`
+Logs: `/tmp/cbs-sports-scraper/` (failure screenshots land there too)
