@@ -7,6 +7,7 @@ const views = ["offsite", "ready", "working", "results", "error"];
 
 let tab = null;
 let shownWeek = null;
+let shownHasResults = true;
 let lastData = null;
 
 function show(view) {
@@ -63,7 +64,10 @@ function setTarget(n) {
   $("targetWeek").value = n;
   $("scrape").textContent = `Scrape week ${n}`;
   $("targetHint").textContent =
-    shownWeek && n === shownWeek ? "The week the page is showing. Use − and + for another."
+    shownWeek && n === shownWeek && !shownHasResults ? `Week ${n} hasn't been scored yet.`
+    : shownWeek && n === shownWeek ? "The week the page is showing. Use − and + for another."
+    : shownWeek && n === shownWeek - 1 && !shownHasResults
+      ? `Week ${shownWeek} hasn't been scored yet, so this defaults to week ${n}.`
     : shownWeek && n > shownWeek ? "A later week than the page is showing; it may not be posted yet."
     : "";
 }
@@ -155,10 +159,12 @@ async function init() {
   }
   if (page.pool) $("poolName").textContent = page.pool;
   shownWeek = page.shown;
+  shownHasResults = page.hasResults !== false;
   $("weekNum").textContent = shownWeek ?? "–";
-  $("weekSub").textContent = "Showing on the page now";
-  // Default to the week the page is on: the dropdown is already the user's choice.
-  setTarget(shownWeek || 1);
+  $("weekSub").textContent = shownHasResults ? "Showing on the page now" : "On the page now · not scored yet";
+  // Default to the week the page is on - the dropdown is the user's choice -
+  // unless that week has no results yet, in which case the finished week before it.
+  setTarget(shownHasResults ? shownWeek || 1 : Math.max(1, (shownWeek || 2) - 1));
   show("ready");
   status("Ready");
 }

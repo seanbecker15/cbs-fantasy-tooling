@@ -38,13 +38,18 @@ async function runScrape(targetWeek) {
     option.click();
     for (let i = 0; i < 40 && comboText() !== want; i++) await wait(250);
     if (comboText() !== want) throw new Error("week-did-not-change:" + n);
-    // Let the table re-render and settle (two consecutive polls with the same row count).
+  }
+
+  // Wait for the table body to render and settle (same row count on two polls).
+  // Needed even when no week switch happens: on a fresh page load the table
+  // skeleton exists before any rows do.
+  async function settle() {
     let prev = -1;
     for (let i = 0; i < 40; i++) {
+      const n = rowCount();
+      if (n > 0 && n === prev) return;
+      prev = n;
       await wait(300);
-      const n2 = rowCount();
-      if (n2 > 0 && n2 === prev) break;
-      prev = n2;
     }
   }
 
@@ -80,16 +85,35 @@ async function runScrape(targetWeek) {
 
   const shownBefore = parseInt((comboText().match(/\d+/) || [])[0], 10);
   if (targetWeek) await selectWeek(targetWeek);
+  await settle();
   const results = scrapeTable();
   const week = parseInt((comboText().match(/\d+/) || [])[0], 10);
   return { week, shownBefore, results, url: location.href };
 }
 
-// Lightweight probe: what week is the page showing, and is the table there?
-function readPage() {
+// Probe: what week is the page showing, is the table there, and has that
+// week been scored? On Tuesday the page opens on the in-progress week with
+// everyone at 0, which is not the week anyone wants to save.
+async function readPage() {
+  const TABLE = 'table[aria-label="Weekly Standings"]';
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const c = document.querySelector('div[role="combobox"].MuiSelect-select');
   const shown = c ? parseInt((c.innerText.match(/\d+/) || [])[0], 10) : null;
-  const table = !!document.querySelector('table[aria-label="Weekly Standings"]');
+  const table = !!document.querySelector(TABLE);
   const pool = (document.querySelector("h1, h2") || {}).innerText || "";
-  return { shown, table, pool: pool.trim(), url: location.href };
+  let rows = [];
+  if (table) {
+    let prev = -1;
+    for (let i = 0; i < 40; i++) {
+      rows = [...document.querySelectorAll(TABLE + " tbody tr")];
+      if (rows.length > 0 && rows.length === prev) break;
+      prev = rows.length;
+      await wait(300);
+    }
+  }
+  const hasResults = rows.some((tr) => {
+    const cells = tr.querySelectorAll("td");
+    return cells.length > 1 && (parseInt(cells[1].innerText.trim(), 10) || 0) > 0;
+  });
+  return { shown, table, hasResults, rows: rows.length, pool: pool.trim(), url: location.href };
 }

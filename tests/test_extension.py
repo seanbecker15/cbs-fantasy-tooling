@@ -51,11 +51,19 @@ def test_export_filename_matches_pipeline():
     assert "week_${lastData.week}_pickem_results.csv" in js
 
 
-def test_popup_defaults_to_the_week_shown_on_the_page():
-    """The dropdown on the page is already the user's choice; don't second-guess it."""
+def test_popup_defaults_to_shown_week_unless_it_is_unscored():
+    """Respect the page's dropdown, but on Tuesday the page opens on the
+    in-progress week with everyone at 0 - default to the finished week before."""
     js = (EXT / "popup.js").read_text()
-    assert "setTarget(shownWeek || 1)" in js
-    assert "shownWeek - 1" not in js.split("function setTarget")[0].split("async function init")[-1]
+    assert "setTarget(shownHasResults ? shownWeek || 1 : Math.max(1, (shownWeek || 2) - 1))" in js
+    scrape_js = (EXT / "scrape.js").read_text()
+    assert "hasResults" in scrape_js and "async function readPage" in scrape_js
+
+
+def test_scrape_waits_for_table_rows_even_without_a_week_switch():
+    js = (EXT / "scrape.js").read_text()
+    body = js.split("if (targetWeek) await selectWeek(targetWeek);")[1]
+    assert body.lstrip().startswith("await settle();")
 
 
 def test_working_message_is_based_on_the_page_at_scrape_time():
