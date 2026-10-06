@@ -80,3 +80,13 @@ def test_page_calls_cannot_hang_the_popup():
     js = (EXT / "popup.js").read_text()
     assert "Promise.race" in js and 'new Error("timeout")' in js
     assert 'id="errorDetail"' in (EXT / "popup.html").read_text()
+
+
+def test_hidden_attribute_wins_over_panel_display():
+    """Every view section is toggled with the `hidden` attribute; a .panel
+    display rule must not override it or all panels show at once."""
+    css = (EXT / "popup.css").read_text()
+    assert "[hidden] { display: none !important; }" in css
+    html = (EXT / "popup.html").read_text()
+    for view in ("offsite", "ready", "working", "results", "error"):
+        assert f'id="{view}" hidden' in html, view

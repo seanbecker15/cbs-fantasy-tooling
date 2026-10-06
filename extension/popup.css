@@ -16,6 +16,9 @@
 }
 
 * { box-sizing: border-box; }
+/* Author display rules (e.g. .panel { display: flex }) would otherwise beat the
+   browser's [hidden] { display: none }, leaving every panel visible at once. */
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   width: 380px;
