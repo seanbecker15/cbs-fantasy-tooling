@@ -60,6 +60,8 @@ class Config:
         # CBS pool configuration - base32 slug from the pool URL
         # e.g. https://picks.cbssports.com/football/pickem/pools/<slug>/standings/weekly
         self.cbs_pool_slug = os.getenv("CBS_POOL_SLUG")
+        # Chrome profile whose signed-in CBS session the scraper reuses
+        self.chrome_profile = os.getenv("CHROME_PROFILE", "Default")
 
         # User configuration
         self.user_name = os.getenv("USER_NAME")

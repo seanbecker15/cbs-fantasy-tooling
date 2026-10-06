@@ -21,9 +21,10 @@ class TestBuildLoginUrl:
     """The pool slug changes every season, so it must come from config."""
 
     def test_embeds_pool_slug_in_redirect(self):
-        url = build_login_url("abc123slug")
+        # 13 chars pads to a 16-char block: the canonical form CBS redirects to.
+        url = build_login_url("kbxw63b2ge3dk")
         xurl = parse_qs(urlparse(url).query)["xurl"][0]
-        assert "/pools/abc123slug/standings/weekly" in xurl
+        assert "/pools/kbxw63b2ge3dk===/standings/weekly" in xurl
 
     def test_redirect_is_url_encoded(self):
         # The slug must be encoded inside xurl, not left as a bare nested URL.

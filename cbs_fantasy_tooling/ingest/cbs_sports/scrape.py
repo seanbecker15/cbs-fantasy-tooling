@@ -15,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from cbs_fantasy_tooling.config import config
+from cbs_fantasy_tooling.ingest.cbs_sports import session
 from cbs_fantasy_tooling.models import PickemResult, PickemResults
 from cbs_fantasy_tooling.publishers import Publisher
 from cbs_fantasy_tooling.publishers.database import DatabasePublisher
@@ -41,7 +42,7 @@ def build_login_url(pool_slug: str | None = None) -> str:
             "CBS_POOL_SLUG is not set. Copy the slug from your pool URL "
             "(https://picks.cbssports.com/football/pickem/pools/<slug>/...) into .env"
         )
-    standings_url = STANDINGS_URL_TEMPLATE.format(slug=slug)
+    standings_url = STANDINGS_URL_TEMPLATE.format(slug=session.canonical_slug(slug))
     return LOGIN_URL_TEMPLATE.format(xurl=quote(standings_url, safe=""))
 
 
@@ -312,7 +313,21 @@ def run_scraper(
     password = config.password
 
     max_wait_time = 30
+
+    # Prefer the user's signed-in Chrome session: CBS's login form is behind
+    # reCAPTCHA and a scripted login is blocked. Fall back to the form only
+    # if the profile cannot be staged.
+    use_session = False
     chrome_options = Options()
+    try:
+        staged = session.stage_profile(
+            session.default_profile_root(), config.chrome_profile, session.staging_dir()
+        )
+        chrome_options = session.chrome_options_for(staged, config.chrome_profile)
+        use_session = True
+        print(f"Using staged Chrome session from profile '{config.chrome_profile}'")
+    except session.ProfileError as e:
+        print(f"Could not stage Chrome profile ({e}); falling back to form login")
 
     driver = webdriver.Chrome(options=chrome_options)
     succeeded = False
@@ -330,8 +345,20 @@ def run_scraper(
             return False
 
     try:
-        navigate_login(driver, max_wait_time, email, password)
-        wait_for_user_input(30)
+        if use_session:
+            driver.get(
+                STANDINGS_URL_TEMPLATE.format(slug=session.canonical_slug(config.cbs_pool_slug))
+            )
+            sleep(5)
+            if session.is_logged_in(driver):
+                print("Session is signed in; skipping login form")
+            else:
+                print("Staged session is not signed in; falling back to form login")
+                navigate_login(driver, max_wait_time, email, password)
+                wait_for_user_input(30)
+        else:
+            navigate_login(driver, max_wait_time, email, password)
+            wait_for_user_input(30)
 
         # Sometimes on first load the page doesn't finish loading
         driver.refresh()
