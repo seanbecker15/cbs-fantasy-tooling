@@ -94,9 +94,14 @@ async function scrape() {
   const me = $("yourName").value;
   chrome.storage.sync.set({ yourName: me });
   show("working");
-  $("workingText").textContent = shownWeek === target ? "Reading the standings…" : `Switching to week ${target}…`;
+  $("workingText").textContent = "Reading the standings…";
   status("");
   try {
+    // Re-read the page: the user may have changed the dropdown since the popup opened.
+    const page = await inject(readPage);
+    if (page && page.shown && page.shown !== target) {
+      $("workingText").textContent = `Switching to week ${target}…`;
+    }
     const data = await inject(runScrape, [target]);
     if (!data || !data.results || data.results.length === 0) throw new Error("empty");
     lastData = data;

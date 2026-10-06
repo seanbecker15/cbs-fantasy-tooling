@@ -56,3 +56,13 @@ def test_popup_defaults_to_the_week_shown_on_the_page():
     js = (EXT / "popup.js").read_text()
     assert "setTarget(shownWeek || 1)" in js
     assert "shownWeek - 1" not in js.split("function setTarget")[0].split("async function init")[-1]
+
+
+def test_working_message_is_based_on_the_page_at_scrape_time():
+    """ "Switching…" must only show when the page is actually on a different week."""
+    html = (EXT / "popup.html").read_text()
+    assert 'id="workingText">Reading the standings…' in html
+    js = (EXT / "popup.js").read_text()
+    scrape_fn = js.split("async function scrape()")[1].split("async function init")[0]
+    assert "await inject(readPage)" in scrape_fn
+    assert "page.shown !== target" in scrape_fn
