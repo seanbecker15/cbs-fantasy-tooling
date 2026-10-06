@@ -26,6 +26,12 @@ cbs-scrape
 cbs-scrape → Analyze Data → Strategy Simulator
 ```
 
+**Weekly standings via the Chrome extension (recommended):**
+```bash
+# scrape in the browser (extension/README.md), then:
+cbs-publish            # emails the newest week_N_pickem_results.json from ~/Downloads
+```
+
 **Data ingestion (once or real-time):**
 ```bash
 cbs-scrape → Ingest Data → Pick'em/Games/Odds → Once/Real-Time
@@ -72,6 +78,7 @@ SUPABASE_KEY=your_key
 - **[docs/publishers.md](docs/publishers.md)** - File/Gmail/Supabase output
 - **[docs/schemas.md](docs/schemas.md)** - Data formats
 - **[docs/season-rollover.md](docs/season-rollover.md)** - Start-of-season checklist
+- **[extension/README.md](extension/README.md)** - Chrome extension: scrape standings from your own browser (no login, no CAPTCHA)
 
 ## Season Rollover
 

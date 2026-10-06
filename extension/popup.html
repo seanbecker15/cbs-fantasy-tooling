@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>3G's Pool Standings</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__eyebrow" id="poolName">3 G's Football Pool</div>
+    <div class="hero__week">
+      <span class="hero__label">Week</span>
+      <span class="hero__num" id="weekNum">–</span>
+    </div>
+    <div class="hero__sub" id="weekSub">Checking the standings page…</div>
+  </header>
+
+  <main class="main">
+    <section class="panel" id="offsite" hidden>
+      <p class="panel__lead">This works on the pool's Weekly standings page.</p>
+      <button class="btn btn--primary" id="openStandings" type="button">Open weekly standings</button>
+      <p class="panel__hint" id="offsiteHint"></p>
+    </section>
+
+    <section class="panel" id="ready" hidden>
+      <div class="field">
+        <label class="field__label" for="targetWeek">Week to scrape</label>
+        <div class="stepper">
+          <button class="stepper__btn" id="weekDown" type="button" aria-label="Previous week">−</button>
+          <input class="stepper__num" id="targetWeek" type="number" min="1" max="18" inputmode="numeric" />
+          <button class="stepper__btn" id="weekUp" type="button" aria-label="Next week">+</button>
+        </div>
+        <p class="field__hint" id="targetHint"></p>
+      </div>
+      <div class="field">
+        <label class="field__label" for="yourName">Your name on the standings</label>
+        <input class="text" id="yourName" type="text" placeholder="e.g. Sean Becker" autocomplete="off" />
+      </div>
+      <button class="btn btn--primary" id="scrape" type="button">Scrape week</button>
+    </section>
+
+    <section class="panel panel--working" id="working" hidden>
+      <div class="pulse" aria-hidden="true"></div>
+      <p class="panel__lead" id="workingText">Switching to the week…</p>
+    </section>
+
+    <section id="results" hidden>
+      <div class="bonus">
+        <div class="bonus__card">
+          <div class="bonus__label">Most points · +10</div>
+          <div class="bonus__value" id="bonusPoints">–</div>
+          <div class="bonus__who" id="bonusPointsWho"></div>
+        </div>
+        <div class="bonus__card">
+          <div class="bonus__label">Most wins · +5</div>
+          <div class="bonus__value" id="bonusWins">–</div>
+          <div class="bonus__who" id="bonusWinsWho"></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="standings" aria-label="Scraped standings">
+          <thead><tr><th class="num">#</th><th>Player</th><th class="num">Pts</th><th class="num">W–L</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button class="btn btn--primary" id="saveJson" type="button">Save JSON</button>
+        <button class="btn" id="saveCsv" type="button">Save CSV</button>
+        <button class="btn btn--ghost" id="again" type="button">Scrape another week</button>
+      </div>
+      <p class="panel__hint">Files go to your Downloads folder. Then run <code>cbs-publish</code> to email the league.</p>
+    </section>
+
+    <section class="panel panel--error" id="error" hidden>
+      <p class="panel__lead" id="errorText"></p>
+      <button class="btn" id="retry" type="button">Try again</button>
+    </section>
+  </main>
+
+  <footer class="foot"><span id="status"></span></footer>
+
+  <script src="scrape.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
