@@ -107,15 +107,18 @@ async function scrape() {
   chrome.storage.sync.set({ yourName: me });
   show("working");
   $("workingText").textContent = "Reading the standings…";
-  status("");
+  // The status line narrates each step so a stall says where it stalled.
+  status("1/3 checking the page…");
   try {
     // Re-read the page: the user may have changed the dropdown since the popup opened.
     const page = await inject(readPage);
     if (page && page.shown && page.shown !== target) {
       $("workingText").textContent = `Switching to week ${target}…`;
     }
+    status(`2/3 scraping week ${target}… (page is on week ${page && page.shown})`);
     const data = await inject(runScrape, [target]);
     if (!data || !data.results || data.results.length === 0) throw new Error("empty");
+    status("3/3 rendering…");
     lastData = data;
     render(data, me);
   } catch (e) {
@@ -133,6 +136,7 @@ async function scrape() {
 }
 
 async function init() {
+  $("version").textContent = "v" + chrome.runtime.getManifest().version;
   [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const { yourName = "", poolUrl = "" } = await chrome.storage.sync.get(["yourName", "poolUrl"]);
   $("yourName").value = yourName;
