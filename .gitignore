@@ -32,3 +32,5 @@ venv/
 
 # Taskfile
 .task
+# Local zip of the extension (built for Drive upload)
+/extension.zip
