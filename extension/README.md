@@ -39,6 +39,10 @@ That's it. Chrome keeps it installed; you don't need to repeat this.
 
 Your own row is highlighted — set your name once in the popup and it's remembered.
 
+The last result stays in the popup for **10 minutes after you last looked at
+it**, so you can close it, work in Excel, and come back to the winners. After
+that a "Last result" strip still offers it with one click.
+
 ## What it saves
 
 Exactly what the Python scraper saves, so nothing downstream changes:

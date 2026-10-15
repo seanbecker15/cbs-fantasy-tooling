@@ -97,9 +97,16 @@ async function runScrape(targetWeek) {
 async function readPage() {
   const TABLE = 'table[aria-label="Weekly Standings"]';
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  // The popup is often opened before the page has finished rendering: give
+  // the table up to ~10s to appear before deciding it is not there.
+  let tableEl = null;
+  for (let i = 0; i < 40 && !tableEl; i++) {
+    tableEl = document.querySelector(TABLE);
+    if (!tableEl) await wait(250);
+  }
   const c = document.querySelector('div[role="combobox"].MuiSelect-select');
   const shown = c ? parseInt((c.innerText.match(/\d+/) || [])[0], 10) : null;
-  const table = !!document.querySelector(TABLE);
+  const table = !!tableEl;
   const pool = (document.querySelector("h1, h2") || {}).innerText || "";
   let rows = [];
   if (table) {

@@ -101,3 +101,23 @@ def test_popup_cannot_scroll_horizontally():
     who = css.split(".bonus__who {")[1].split("}")[0]
     assert "nowrap" not in who and "overflow-wrap: anywhere" in who
     assert "minmax(0, 1fr)" in css
+
+
+def test_last_result_is_cached_and_reoffered():
+    """Closing the popup must not lose the result: it is kept in
+    chrome.storage.local and shown again within 10 minutes of the last look."""
+    js = (EXT / "popup.js").read_text()
+    assert "CACHE_TTL_MS = 10 * 60 * 1000" in js
+    assert "chrome.storage.local.set({ lastResult: cache })" in js
+    assert "if (cacheFresh())" in js and "showCached()" in js
+    assert 'id="lastResult"' in (EXT / "popup.html").read_text()
+
+
+def test_page_detection_tolerates_loading_and_navigation():
+    js = (EXT / "popup.js").read_text()
+    assert "tab.pendingUrl || tab.url" in js
+    assert "attempt < 3" in js.split("async function detectPage")[1].split("function applyReady")[0]
+    assert "startRecheck(" in js and "RECHECK_EVERY_MS" in js
+    scrape_js = (EXT / "scrape.js").read_text()
+    probe = scrape_js.split("async function readPage")[1]
+    assert "tableEl = document.querySelector(TABLE)" in probe and "await wait(250)" in probe
